@@ -1,6 +1,13 @@
+// Basic Next.js dynamic page component
 import JobApplicationsClient from './JobApplicationsClient'
 
-// Next.js 15 server component with minimal typing
-export default function JobApplicationsPage({ params }: { params: { jobId: string } }) {
-  return <JobApplicationsClient jobId={params.jobId} />
+type Props = {
+  params: {
+    jobId: string;
+  };
+  searchParams: Record<string, string | string[] | undefined>;
+};
+
+export default function Page(props: Props) {
+  return <JobApplicationsClient jobId={props.params.jobId} />;
 } 
