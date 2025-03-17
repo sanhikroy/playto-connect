@@ -1,13 +1,15 @@
 import JobApplicationsClient from './JobApplicationsClient'
+import { Metadata } from 'next'
 
-// Page props interface for Next.js pages
-interface PageProps {
-  params: {
-    jobId: string;
-  }
+// Use the correct Next.js types for page params
+type Params = {
+  jobId: string
 }
 
-// Server component
-export default function JobApplicationsPage({ params }: PageProps) {
-  return <JobApplicationsClient jobId={params.jobId} />
+// Next.js 15 page component with proper typing
+export default async function JobApplicationsPage({ params }: { params: Params }) {
+  // Parse the job ID from params
+  const jobId = params.jobId
+
+  return <JobApplicationsClient jobId={jobId} />
 } 
