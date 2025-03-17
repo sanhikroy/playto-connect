@@ -1,0 +1,118 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linting
+        run: npm run lint
+      
+      - name: Setup test database
+        run: |
+          npx prisma generate
+          npx prisma db push --accept-data-loss
+        env:
+          DATABASE_URL: "file:./test.db"
+          DATABASE_PROVIDER: "sqlite"
+      
+      - name: Run tests
+        run: npm test
+  
+  build:
+    name: Build
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          # Use test environment variables for the build
+          DATABASE_URL: "file:./test.db"
+          DATABASE_PROVIDER: "sqlite"
+          NEXTAUTH_URL: "http://localhost:3000"
+          NEXTAUTH_SECRET: "test-secret-do-not-use-in-production"
+      
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            .next
+            public
+            package.json
+            package-lock.json
+            next.config.ts
+            prisma
+  
+  deploy-preview:
+    name: Deploy Preview
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+      
+      - name: Deploy to Vercel Preview
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+  
+  deploy-production:
+    name: Deploy Production
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+      
+      - name: Deploy to Vercel Production
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          scope: ${{ secrets.VERCEL_ORG_ID }} 

@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Use environment variable for database provider
+// For development: "sqlite" (default)
+// For production: "postgresql"
+datasource db {
+  provider = env("DATABASE_PROVIDER") // Defaults to sqlite when not set
+  url      = env("DATABASE_URL")      // URL depends on the provider
+  // For PostgreSQL in production, you may want to enable these:
+  // directUrl = env("DIRECT_URL") // Direct connection for migrations
+  // relationMode = "prisma"       // For managed environments that don't support foreign keys
+}
+
+model User {
+  id                 String          @id @default(cuid())
+  name              String?
+  email             String          @unique
+  password          String
+  role              UserRole        @default(TALENT)
+  hasCompletedProfile Boolean       @default(false)
+  emailVerified     DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  talentProfile     TalentProfile?
+  employerProfile   EmployerProfile?
+  jobs              Job[]           // Only for employers
+  applications      Application[]   // Only for talent
+}
+
+model TalentProfile {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  title         String
+  bio           String
+  skills        String    // Store as a JSON string of selected skills
+  experience    String    // Now stores the selected experience level
+  portfolioUrl  String?
+  socialMediaUrl String?
+  profilePicture String?  // URL to the profile picture
+  portfolioVideos String? // Store as a JSON string of video URLs
+  isComplete    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmployerProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  companyName       String
+  companyDescription String
+  industry          String
+  website           String
+  location          String
+  size              String
+  isComplete        Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Job {
+  id              String        @id @default(cuid())
+  title           String
+  description     String
+  requirements    String
+  salary          String?
+  location        String?
+  isRemote        Boolean       @default(false)
+  type            String        // Full-time, Part-time, Contract, etc.
+  role            String        // e.g., Video Editor, Motion Designer
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  employerId      String
+  employer        User          @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  applications    Application[]
+}
+
+model Application {
+  id          String    @id @default(cuid())
+  coverLetter String?
+  status      ApplicationStatus @default(PENDING)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  jobId       String
+  job         Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  talentId    String
+  talent      User      @relation(fields: [talentId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  email       String
+  expires     DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([email])
+  @@index([token])
+}
+
+enum UserRole {
+  TALENT
+  EMPLOYER
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  ACCEPTED
+  REJECTED
+} 
