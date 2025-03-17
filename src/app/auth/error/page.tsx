@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function AuthError() {
+function AuthErrorContent() {
   const searchParams = useSearchParams()
   const [errorMessage, setErrorMessage] = useState<string>('')
   
@@ -69,5 +69,28 @@ export default function AuthError() {
         </div>
       </div>
     </main>
+  )
+}
+
+// Loading fallback for Suspense
+function AuthErrorLoading() {
+  return (
+    <main className="min-h-screen bg-[#0A0A0A]">
+      <div className="flex min-h-screen flex-col justify-center px-6 py-12 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <h2 className="mt-10 text-center text-3xl font-bold leading-9 tracking-tight text-white">
+            Loading...
+          </h2>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+export default function AuthError() {
+  return (
+    <Suspense fallback={<AuthErrorLoading />}>
+      <AuthErrorContent />
+    </Suspense>
   )
 } 

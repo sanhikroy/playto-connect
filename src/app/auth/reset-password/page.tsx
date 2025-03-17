@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function ResetPassword() {
+function ResetPasswordContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [token, setToken] = useState<string | null>(null)
@@ -226,5 +226,29 @@ export default function ResetPassword() {
         </div>
       </div>
     </main>
+  )
+}
+
+// Loading fallback for Suspense
+function ResetPasswordLoading() {
+  return (
+    <main className="min-h-screen bg-[#0A0A0A]">
+      <div className="flex min-h-screen flex-col justify-center px-6 py-12 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-gray-400">Loading...</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={<ResetPasswordLoading />}>
+      <ResetPasswordContent />
+    </Suspense>
   )
 } 

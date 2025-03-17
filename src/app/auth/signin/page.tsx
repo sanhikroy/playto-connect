@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function SignIn() {
+function SignInContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
@@ -151,5 +151,31 @@ export default function SignIn() {
         </div>
       </div>
     </main>
+  )
+}
+
+// Loading fallback for Suspense
+function SignInLoading() {
+  return (
+    <main className="min-h-screen bg-[#0A0A0A]">
+      <div className="flex min-h-screen flex-col justify-center px-6 py-12 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <h2 className="mt-10 text-center text-3xl font-bold leading-9 tracking-tight text-white">
+            Sign in to your account
+          </h2>
+          <div className="mt-10 flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+export default function SignIn() {
+  return (
+    <Suspense fallback={<SignInLoading />}>
+      <SignInContent />
+    </Suspense>
   )
 } 

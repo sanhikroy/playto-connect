@@ -1,59 +1,45 @@
 import { NextResponse } from 'next/server'
-import { rateLimiters, applyRateLimitHeaders } from '@/lib/rate-limit'
-import extendedPrisma from '@/lib/prisma-helpers'
+import prisma from '@/lib/prisma'
 
-export async function POST(request: Request) {
+/**
+ * Verifies if a password reset token is valid
+ * 
+ * GET /api/auth/verify-reset-token?token=xyz
+ * 
+ * Response:
+ *   Success: { valid: true, email: string }
+ *   Error: { valid: false, error: string }
+ */
+export async function GET(request: Request) {
   try {
-    // Apply rate limiting (auth limits for token verification)
-    const rateLimit = await rateLimiters.auth(request);
+    // Get token from URL parameters
+    const url = new URL(request.url)
+    const token = url.searchParams.get('token')
     
-    if (!rateLimit.success) {
-      const response = NextResponse.json(
-        { message: rateLimit.message || 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
-      
-      // Add rate limiting headers to the response
-      return applyRateLimitHeaders(response, rateLimit.headers);
-    }
-
-    const { token } = await request.json()
-
     if (!token) {
-      return NextResponse.json(
-        { message: 'Token is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ valid: false, error: 'Token is required' }, { status: 400 })
     }
-
+    
     // Find the token in the database
-    const resetToken = await extendedPrisma.passwordResetToken.findUnique({
+    const resetToken = await prisma.passwordResetToken.findUnique({
       where: { token }
     })
-
-    // Check if token exists and is not expired
-    if (!resetToken || resetToken.expires < new Date()) {
-      // If token doesn't exist or is expired, return an error
-      const response = NextResponse.json(
-        { message: 'Invalid or expired token' },
-        { status: 400 }
-      );
-      
-      return applyRateLimitHeaders(response, rateLimit.headers);
-    }
-
-    // Token is valid
-    const response = NextResponse.json({
-      message: 'Token is valid',
-      email: resetToken.email
-    });
     
-    return applyRateLimitHeaders(response, rateLimit.headers);
+    // Check if token exists
+    if (!resetToken) {
+      return NextResponse.json({ valid: false, error: 'Invalid token' }, { status: 400 })
+    }
+    
+    // Check if token has expired
+    if (new Date() > resetToken.expires) {
+      return NextResponse.json({ valid: false, error: 'Token has expired' }, { status: 400 })
+    }
+    
+    // Token is valid
+    return NextResponse.json({ valid: true, email: resetToken.email })
+    
   } catch (error) {
-    console.error('Error verifying reset token:', error)
-    return NextResponse.json(
-      { message: 'An error occurred while verifying the token' },
-      { status: 500 }
-    )
+    console.error('Error verifying token:', error)
+    return NextResponse.json({ valid: false, error: 'Failed to verify token' }, { status: 500 })
   }
 } 

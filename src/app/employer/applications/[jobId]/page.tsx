@@ -2,12 +2,13 @@
 import JobApplicationsClient from './JobApplicationsClient'
 
 type Props = {
-  params: {
+  params: Promise<{
     jobId: string;
-  };
-  searchParams: Record<string, string | string[] | undefined>;
+  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default function Page(props: Props) {
-  return <JobApplicationsClient jobId={props.params.jobId} />;
+export default async function Page(props: Props) {
+  const { jobId } = await props.params;
+  return <JobApplicationsClient jobId={jobId} />;
 } 

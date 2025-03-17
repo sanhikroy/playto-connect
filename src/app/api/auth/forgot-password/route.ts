@@ -1,109 +1,96 @@
-import { NextResponse } from 'next/server'
-import { randomBytes } from 'crypto'
-import { csrfMiddleware } from '@/lib/csrf'
-import { rateLimiters, applyRateLimitHeaders } from '@/lib/rate-limit'
-import extendedPrisma from '@/lib/prisma-helpers'
+import { NextRequest, NextResponse } from 'next/server'
+import bcrypt from 'bcrypt'
+import { v4 as uuidv4 } from 'uuid'
+import prisma from '@/lib/prisma'
+import { sendPasswordResetEmail } from '@/lib/email'
+import Tokens from 'csrf'
 
-// In a production app, you would use an email service like SendGrid, Mailgun, etc.
-// For this example, we'll just log the reset link to the console
-async function sendPasswordResetEmail(email: string, token: string) {
-  const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/reset-password?token=${token}`
-  
-  console.log(`
-    =============================
-    Password Reset Link for ${email}:
-    ${resetLink}
-    =============================
-  `)
-  
-  // Simulating successful email sending
-  return true
-}
+// Create a new CSRF tokens generator
+const csrf = new Tokens()
 
-export async function POST(request: Request) {
+// Generate a new secret
+const secret = process.env.CSRF_SECRET || 'default-secret-do-not-use-in-production'
+
+/**
+ * POST /api/auth/forgot-password
+ * 
+ * Request body: { email: string, csrfToken: string }
+ * Response: 
+ *   Success: { success: true, message: string }
+ *   Error: { success: false, error: string }
+ */
+export async function POST(request: NextRequest) {
   try {
-    // Apply rate limiting (strict limits for password reset)
-    const rateLimit = await rateLimiters.passwordReset(request);
-    
-    if (!rateLimit.success) {
-      const response = NextResponse.json(
-        { message: rateLimit.message || 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
-      
-      // Add rate limiting headers to the response
-      return applyRateLimitHeaders(response, rateLimit.headers);
-    }
-    
-    // Apply CSRF protection middleware
-    const csrfCheck = await csrfMiddleware()(request);
-    
-    if (!csrfCheck.success) {
-      return NextResponse.json(
-        { message: csrfCheck.message || 'CSRF validation failed' },
-        { status: 403 }
-      );
-    }
+    // 1. Parse the request body
+    const body = await request.json()
+    const { email, csrfToken } = body
 
-    const { email } = await request.json()
-
+    // 2. Validate inputs
     if (!email) {
-      return NextResponse.json(
-        { message: 'Email is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: 'Email is required' }, { status: 400 })
     }
 
-    // Check if user exists
-    const user = await extendedPrisma.user.findUnique({
-      where: { email }
-    })
-
-    // For security reasons, we don't want to reveal if a user exists or not
-    // So we always return success, even if the email doesn't exist
-    if (!user) {
-      // Still add rate limiting headers even for non-existent users
-      const response = NextResponse.json({
-        message: 'If an account with that email exists, we have sent a password reset link'
-      });
-      
-      return applyRateLimitHeaders(response, rateLimit.headers);
-    }
-
-    // Generate a token
-    const token = randomBytes(32).toString('hex')
-    
-    // Set expiration time to 1 hour from now
-    const expires = new Date(Date.now() + 3600000)
-
-    // Delete any existing reset tokens for this user
-    await extendedPrisma.passwordResetToken.deleteMany({
-      where: { email }
-    })
-
-    // Create a new reset token
-    await extendedPrisma.passwordResetToken.create({
-      data: {
-        token,
-        email,
-        expires
+    // 3. If CSRF protection is enabled (should be in production)
+    if (process.env.NODE_ENV === 'production') {
+      // Check CSRF token from request
+      if (!csrfToken) {
+        return NextResponse.json({ success: false, error: 'CSRF token is required' }, { status: 400 })
       }
+
+      // Verify CSRF token
+      const validToken = csrf.verify(secret, csrfToken)
+      if (!validToken) {
+        return NextResponse.json({ success: false, error: 'Invalid CSRF token' }, { status: 403 })
+      }
+    }
+
+    // 4. Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { email },
     })
 
-    // Send the reset email
-    await sendPasswordResetEmail(email, token)
+    // 5. Return success even if user doesn't exist for security reasons
+    if (!user) {
+      // We don't want to reveal that the email doesn't exist in our database
+      // So we still return success=true but don't send any email
+      return NextResponse.json({
+        success: true,
+        message: 'If your email exists in our system, you will receive a password reset link shortly'
+      })
+    }
 
-    // Return success response with rate limiting headers
-    const response = NextResponse.json({
-      message: 'If an account with that email exists, we have sent a password reset link'
-    });
-    
-    return applyRateLimitHeaders(response, rateLimit.headers);
+    // 6. Generate a unique token
+    const token = uuidv4()
+
+    // 7. Set expiration time (1 hour from now)
+    const expiresIn = 60 * 60 * 1000 // 1 hour in milliseconds
+    const expires = new Date(Date.now() + expiresIn)
+
+    // 8. Delete any existing reset tokens for this user
+    await prisma.passwordResetToken.deleteMany({
+      where: { email },
+    })
+
+    // 9. Create a new password reset token in the database
+    await prisma.passwordResetToken.create({
+      data: {
+        email,
+        token,
+        expires,
+      },
+    })
+
+    // 10. Send email with reset link
+    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${token}`
+    await sendPasswordResetEmail(email, resetUrl)
+
+    // 11. Return success response
+    return NextResponse.json({
+      success: true,
+      message: 'If your email exists in our system, you will receive a password reset link shortly'
+    })
   } catch (error) {
-    console.error('Error in forgot password:', error)
-    return NextResponse.json(
-      { message: 'An error occurred while processing your request' },
-      { status: 500 }
-    )
+    console.error('Password reset request failed:', error)
+    return NextResponse.json({ success: false, error: 'Failed to process password reset request' }, { status: 500 })
   }
 } 

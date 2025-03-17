@@ -1,15 +1,17 @@
 // Load cypress-axe for accessibility testing
 import 'cypress-axe'
+// No need to import index.d.ts, it gets used automatically
 
-// Define custom commands
-Cypress.Commands.add('checkA11y', (context, options) => {
-  cy.injectAxe()
-  cy.checkA11y(context, options)
+// Custom command for tabbing
+Cypress.Commands.add('tab', () => {
+  cy.focused().trigger('keydown', { keyCode: 9, which: 9 })
 })
 
 // Command to check if element is keyboard navigable
 Cypress.Commands.add('isKeyboardNavigable', (selector) => {
-  cy.get('body').tab().focused().should('match', selector)
+  cy.focused().trigger('keydown', { keyCode: 9, which: 9 }).then(() => {
+    cy.focused().should('match', selector)
+  })
 })
 
 // Command to test color contrast
@@ -41,7 +43,7 @@ Cypress.Commands.add('hasAccessibleLabel', (selector) => {
 declare global {
   namespace Cypress {
     interface Chainable {
-      checkA11y: (context?: string, options?: any) => void
+      checkA11y: (context?: string | null, options?: any) => void
       isKeyboardNavigable: (selector: string) => void
       hasAdequateContrast: (selector: string) => void
       hasAccessibleLabel: (selector: string) => void
