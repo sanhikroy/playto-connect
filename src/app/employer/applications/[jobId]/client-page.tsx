@@ -53,23 +53,51 @@ const ProfileModal = ({ application, isOpen, onClose }: {
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose}></div>
       <div className="relative p-4 min-h-screen flex items-center justify-center">
         <div className="relative bg-[#0A0A0A] rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 mx-auto">
-          {/* Modal content here */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white"
+          >
+            <XCircleIcon className="h-6 w-6" />
+          </button>
+          
+          {/* Profile Header */}
+          <div className="flex items-center mb-8">
+            <div className="relative mr-6">
+              <div className="h-24 w-24 bg-gray-800 rounded-full overflow-hidden">
+                {application.applicantName.split(' ').map(name => name[0]).join('')}
+                <div className="absolute inset-0 flex items-center justify-center text-white text-xl font-bold">
+                  {application.applicantName.split(' ').map(name => name[0]).join('')}
+                </div>
+              </div>
+              <div className="absolute -bottom-1 -right-1 text-xs px-1.5 py-0.5 bg-gray-800 rounded-full text-white border border-gray-700">
+                {application.applicantName.split(' ')[0]}
+              </div>
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold text-white">{application.applicantName}</h2>
+              <p className="text-xl text-gray-400">Senior Video Editor</p>
+            </div>
+          </div>
+          
+          {/* Other components */}
+          
+          {/* Cover Letter Section */}
+          <div className="mt-8 border-t border-white/10 pt-8">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-2xl font-bold text-white">Cover Letter</h3>
+              <div className="bg-[#1d1d1d] text-gray-400 px-3 py-1 rounded-full text-sm">Application #{application.id}</div>
+            </div>
+            <div className="bg-[#111] rounded-xl p-6">
+              <p className="text-gray-300 whitespace-pre-line">{application.coverLetter}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-interface JobApplicationsPageProps {
-  params: {
-    jobId: string;
-  };
-}
-
-export default function JobApplications(props: JobApplicationsPageProps) {
-  const { params } = props;
-  const jobId = params.jobId;
-  
+export default function JobApplicationsClient({ jobId }: { jobId: string }) {
   const [job, setJob] = useState<Job | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,16 +123,7 @@ export default function JobApplications(props: JobApplicationsPageProps) {
         
         // Mock applications data
         setApplications([
-          {
-            id: '1',
-            applicantName: 'James Wilson',
-            applicantEmail: 'james.wilson@example.com',
-            submittedDate: '2023-06-16',
-            coverLetter: 'I am writing to express my interest...',
-            resumeUrl: '/resumes/james-wilson.pdf',
-            status: 'pending'
-          },
-          // More application data
+          // Sample application data
         ])
       } catch (error) {
         console.error('Error fetching applications:', error)
@@ -116,8 +135,21 @@ export default function JobApplications(props: JobApplicationsPageProps) {
     fetchApplications()
   }, [jobId])
 
-  // Rest of the component code...
-  
+  const updateApplicationStatus = (applicationId: string, newStatus: ApplicationStatus) => {
+    setApplications(applications.map(app => 
+      app.id === applicationId ? { ...app, status: newStatus } : app
+    ))
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    }).format(date)
+  }
+
   return (
     <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
       {/* UI components */}
