@@ -4,14 +4,21 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run prisma:generate && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "cypress open",
     "test:e2e:headless": "cypress run",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "cypress": "cypress open",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:reset": "prisma migrate reset --force",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "vercel-build": "node scripts/deploy.js && next build",
+    "prepare-vercel-db": "node scripts/prepare-vercel-db.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.8.0",
