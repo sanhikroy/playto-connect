@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { 
-  BuildingOfficeIcon,
-  PencilSquareIcon,
-  DocumentPlusIcon,
-  UserGroupIcon,
-  ChartBarIcon,
-  EyeIcon,
-  TrashIcon,
+  // BuildingOfficeIcon,
+  // PencilSquareIcon,
+  // DocumentPlusIcon,
+  // UserGroupIcon,
+  // ChartBarIcon,
+  // EyeIcon,
+  // TrashIcon,
   PlusIcon,
   BuildingOffice2Icon
 } from '@heroicons/react/24/outline'

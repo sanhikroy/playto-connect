@@ -125,7 +125,7 @@ export default function SignIn() {
                   <div className="w-full border-t border-white/10" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="bg-[#111] px-2 text-gray-400">Don't have an account?</span>
+                  <span className="bg-[#111] px-2 text-gray-400">Don&apos;t have an account?</span>
                 </div>
               </div>
 

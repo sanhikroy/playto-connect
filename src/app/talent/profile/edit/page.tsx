@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { 
-  ArrowLeftIcon,
-  PlusIcon, 
-  XMarkIcon,
-  PaperClipIcon, 
+  // ArrowLeftIcon,
+  // PlusIcon, 
+  // XMarkIcon,
+  // PaperClipIcon, 
   TrashIcon,
   ArrowUpTrayIcon
 } from '@heroicons/react/24/outline'

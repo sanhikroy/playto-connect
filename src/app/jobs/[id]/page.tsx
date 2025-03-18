@@ -455,7 +455,7 @@ export default function JobDetail() {
       <main className="min-h-screen bg-[#0A0A0A]">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-white">Job Not Found</h1>
-          <p className="mt-4 text-lg text-gray-400">The job you're looking for doesn't exist or has been removed.</p>
+          <p className="mt-4 text-lg text-gray-400">The job you&apos;re looking for doesn&apos;t exist or has been removed.</p>
           <Link
             href="/jobs"
             className="mt-8 inline-flex items-center rounded-full bg-white px-6 py-3 text-base font-medium text-black hover:bg-gray-100"
@@ -631,7 +631,7 @@ export default function JobDetail() {
                   {submitSuccess ? (
                     <div className="bg-green-500/10 text-green-400 p-4 rounded-lg text-center">
                       <h4 className="text-lg font-medium mb-2">Application Submitted!</h4>
-                      <p>Thank you for your application. We'll be in touch soon.</p>
+                      <p>Thank you for your application. We&apos;ll be in touch soon.</p>
                     </div>
                   ) : (
                     <form onSubmit={handleSubmit}>
@@ -647,7 +647,7 @@ export default function JobDetail() {
                             onChange={handleInputChange}
                             rows={6}
                             className="block w-full rounded-lg border-0 bg-white/5 px-4 py-3 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-blue-400/50 sm:text-sm"
-                            placeholder="Tell us about your relevant experience, skills, and why you're excited about this role..."
+                            placeholder="Tell us about your relevant experience, skills, and why you&apos;re excited about this role..."
                           />
                           {formErrors.whyInterested && (
                             <p className="mt-1 text-sm text-red-400">{formErrors.whyInterested}</p>
@@ -674,7 +674,7 @@ export default function JobDetail() {
 
                         <div>
                           <label htmlFor="additionalInfo" className="block text-sm font-medium text-gray-400 mb-1">
-                            Anything else you'd like to mention?
+                            Anything else you&apos;d like to mention?
                           </label>
                           <textarea
                             id="additionalInfo"

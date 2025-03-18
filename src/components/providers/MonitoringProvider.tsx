@@ -7,19 +7,6 @@ interface MonitoringProviderProps {
   children: ReactNode
 }
 
-interface ErrorEvent {
-  error: Error;
-  message: string;
-  filename?: string;
-  lineno?: number;
-  colno?: number;
-}
-
-interface UnhandledRejectionEvent {
-  reason: Error | unknown;
-  promise: Promise<unknown>;
-}
-
 export function MonitoringProvider({ children }: MonitoringProviderProps) {
   useEffect(() => {
     if (typeof window !== 'undefined') {

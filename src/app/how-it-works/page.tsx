@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function HowItWorks() {
   return (
     <main className="min-h-screen bg-[#0A0A0A] text-white">
@@ -109,18 +111,18 @@ export default function HowItWorks() {
         <div className="mt-20 text-center">
           <h2 className="text-3xl font-bold mb-6">Ready to get started?</h2>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a 
+            <Link 
               href="/auth/signup" 
               className="rounded-full bg-white px-8 py-3 text-base font-medium text-black hover:bg-gray-100 transition-all duration-200"
             >
               Create an Account
-            </a>
-            <a 
+            </Link>
+            <Link 
               href="/" 
               className="rounded-full bg-white/10 px-8 py-3 text-base font-medium text-white hover:bg-white/20 transition-all duration-200"
             >
               Learn More
-            </a>
+            </Link>
           </div>
         </div>
       </div>

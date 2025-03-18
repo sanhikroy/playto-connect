@@ -183,7 +183,7 @@ export default function EditApplication() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pb-12 pt-20">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-white">Application Not Found</h1>
-            <p className="mt-4 text-lg text-gray-400">The application you're looking for doesn't exist or has been removed.</p>
+            <p className="mt-4 text-lg text-gray-400">The application you&apos;re looking for doesn&apos;t exist or has been removed.</p>
             <Link
               href="/employer/dashboard"
               className="mt-8 inline-flex items-center rounded-full bg-white px-6 py-3 text-base font-medium text-black hover:bg-gray-100"

@@ -7,7 +7,6 @@ import {
   ArrowLeftIcon,
   PlayIcon,
   XMarkIcon,
-  LinkIcon,
   EnvelopeIcon,
 } from '@heroicons/react/24/outline'
 import { processVideoUrl, formatExperienceLevel, getDefaultProfilePicture } from '@/lib/utils/talentProfile'
