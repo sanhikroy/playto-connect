@@ -1,12 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useCsrf } from '@/lib/hooks/useCsrf'
 
 export default function ForgotPassword() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -61,7 +59,7 @@ export default function ForgotPassword() {
             Reset your password
           </h2>
           <p className="mt-2 text-center text-sm text-gray-400">
-            Enter your email address and we'll send you a link to reset your password.
+            Enter your email address and we&apos;ll send you a link to reset your password.
           </p>
         </div>
 
@@ -85,7 +83,7 @@ export default function ForgotPassword() {
                   Password reset link sent! Check your email.
                 </div>
                 <p className="mt-4 text-sm text-gray-400">
-                  If you don't see the email, please check your spam folder.
+                  If you don&apos;t see the email, please check your spam folder.
                 </p>
                 <div className="mt-6">
                   <Link

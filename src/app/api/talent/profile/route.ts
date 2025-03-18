@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
-import type { User, TalentProfile } from '@/types/models'
 
 export async function PUT(request: Request) {
   try {

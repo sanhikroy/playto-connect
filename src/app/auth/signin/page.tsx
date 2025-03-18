@@ -11,7 +11,6 @@ export default function SignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const [callbackUrl, setCallbackUrl] = useState('')
 
   // Get the callback URL from the query parameters
@@ -24,7 +23,7 @@ export default function SignIn() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+
     setLoading(true)
 
     try {
@@ -36,7 +35,6 @@ export default function SignIn() {
       })
 
       if (result?.error) {
-        setError('Invalid email or password')
         setLoading(false)
         return
       }
@@ -49,7 +47,6 @@ export default function SignIn() {
       }
       router.refresh()
     } catch (error) {
-      setError('An error occurred. Please try again.')
       setLoading(false)
     }
   }
@@ -65,12 +62,6 @@ export default function SignIn() {
 
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-md">
           <div className="bg-[#111] px-6 py-8 shadow-md ring-1 ring-white/10 rounded-xl sm:px-8">
-            {error && (
-              <div className="mb-6 rounded-md bg-red-500/20 p-4 text-sm text-red-400">
-                {error}
-              </div>
-            )}
-            
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-300">

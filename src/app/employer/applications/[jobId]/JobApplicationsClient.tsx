@@ -6,7 +6,6 @@ import {
   ArrowLeftIcon,
   ChevronDownIcon, 
   EnvelopeIcon,
-  DocumentTextIcon,
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
