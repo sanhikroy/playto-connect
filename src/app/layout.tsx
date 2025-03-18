@@ -4,6 +4,7 @@ import { AuthProvider } from '@/components/providers/AuthProvider'
 import { ReactNode } from 'react'
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary'
 import { MonitoringProvider } from '@/components/providers/MonitoringProvider'
+import { Analytics } from '@vercel/analytics/react'
 
 export const metadata = {
   title: 'Connect - Find & Hire YouTube Talent',
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             </ErrorBoundary>
           </MonitoringProvider>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   )

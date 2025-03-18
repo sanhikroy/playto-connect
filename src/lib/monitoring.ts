@@ -3,6 +3,7 @@
  * 
  * This can be connected to services like Sentry, LogRocket, or custom analytics
  */
+import * as Sentry from '@sentry/nextjs';
 
 // For client-side monitoring
 let isInitialized = false;
@@ -40,12 +41,13 @@ export function initMonitoring() {
       // Client-side initialization
       console.log('Monitoring initialized in production (client-side)');
       
-      // Example Sentry initialization
-      // import * as Sentry from '@sentry/nextjs';
-      // Sentry.init({
-      //   dsn: process.env.SENTRY_DSN,
-      //   tracesSampleRate: 0.1,
-      // });
+      // Sentry initialization
+      Sentry.init({
+        dsn: process.env.NEXT_PUBLIC_SENTRY_DSN || '',
+        tracesSampleRate: 0.1,
+        environment: process.env.NODE_ENV,
+        enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
+      });
     } else {
       // Server-side initialization
       console.log('Monitoring initialized in production (server-side)');
@@ -67,11 +69,15 @@ export function logError(details: ErrorDetails) {
   
   if (process.env.NODE_ENV === 'production') {
     // In production, send to error monitoring service
-    // Example Sentry capture
-    // Sentry.captureException(new Error(details.message), {
-    //   extra: details.context,
-    //   tags: { component: details.component }
-    // });
+    const error = new Error(details.message);
+    if (details.stack) {
+      error.stack = details.stack;
+    }
+    
+    Sentry.captureException(error, {
+      extra: details.context,
+      tags: { component: details.component }
+    });
   }
 }
 
@@ -85,12 +91,12 @@ export function logPerformance(metric: PerformanceMetric) {
   
   if (process.env.NODE_ENV === 'production') {
     // In production, send to monitoring service
-    // Example custom analytics call
-    // analytics.logPerformance({
-    //   name: metric.name,
-    //   value: metric.duration,
-    //   ...metric.context
-    // });
+    Sentry.addBreadcrumb({
+      category: 'performance',
+      message: `${metric.name}: ${metric.duration}ms`,
+      level: 'info',
+      data: metric.context
+    });
   }
 }
 
@@ -103,16 +109,17 @@ export function trackUserAction(event: UserActionEvent) {
   console.log('User action:', event.category, event.action, event.label, event.value);
   
   if (process.env.NODE_ENV === 'production' && typeof window !== 'undefined') {
-    // In production, send to analytics
-    // Example Google Analytics call
-    // if (window.gtag) {
-    //   window.gtag('event', event.action, {
-    //     event_category: event.category,
-    //     event_label: event.label,
-    //     value: event.value,
-    //     ...event.context
-    //   });
-    // }
+    // Add breadcrumb to Sentry
+    Sentry.addBreadcrumb({
+      category: event.category,
+      message: event.action,
+      data: {
+        label: event.label,
+        value: event.value,
+        ...event.context
+      },
+      level: 'info'
+    });
   }
 }
 
