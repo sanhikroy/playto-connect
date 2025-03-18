@@ -23,19 +23,32 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Run linting
-        run: npm run lint
-      
-      - name: Setup test database
-        run: |
-          npx prisma generate
-          npx prisma db push --accept-data-loss
+      - name: Generate Prisma client
+        run: npx prisma generate
         env:
           DATABASE_URL: "file:./test.db"
           DATABASE_PROVIDER: "sqlite"
       
+      - name: Run linting
+        run: npm run lint
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      
+      - name: Setup test database
+        run: npx prisma db push --accept-data-loss
+        env:
+          DATABASE_URL: "file:./test.db"
+          DATABASE_PROVIDER: "sqlite"
+          DIRECT_URL: "file:./test.db"
+      
       - name: Run tests
         run: npm test
+        env:
+          DATABASE_URL: "file:./test.db"
+          DATABASE_PROVIDER: "sqlite"
+          DIRECT_URL: "file:./test.db"
+          NEXTAUTH_URL: "http://localhost:3000"
+          NEXTAUTH_SECRET: "test-secret-do-not-use-in-production"
   
   build:
     name: Build
@@ -55,14 +68,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "file:./test.db"
+          DATABASE_PROVIDER: "sqlite"
+      
       - name: Build Next.js app
         run: npm run build
         env:
           # Use test environment variables for the build
           DATABASE_URL: "file:./test.db"
           DATABASE_PROVIDER: "sqlite"
+          DIRECT_URL: "file:./test.db"
           NEXTAUTH_URL: "http://localhost:3000"
           NEXTAUTH_SECRET: "test-secret-do-not-use-in-production"
+          CSRF_SECRET: "test-csrf-secret"
       
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
