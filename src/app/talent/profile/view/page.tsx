@@ -4,14 +4,11 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   BriefcaseIcon,
-  DocumentTextIcon,
-  GlobeAltIcon,
-  AtSymbolIcon,
   ArrowLeftIcon,
-  FilmIcon,
   PlayIcon,
   XMarkIcon,
-  UserCircleIcon
+  LinkIcon,
+  EnvelopeIcon,
 } from '@heroicons/react/24/outline'
 import { processVideoUrl, formatExperienceLevel, getDefaultProfilePicture } from '@/lib/utils/talentProfile'
 
@@ -138,7 +135,7 @@ export default function ViewTalentProfile() {
           <div className="text-center">
             <h1 className="text-3xl font-bold text-white mb-4">Profile Not Found</h1>
             <p className="text-gray-400 mb-8">
-              The talent profile you're looking for doesn't exist or has been removed.
+              The talent profile you&apos;re looking for doesn&apos;t exist or has been removed.
             </p>
             <Link
               href="/talent/dashboard"
@@ -216,7 +213,7 @@ export default function ViewTalentProfile() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center rounded-lg bg-white/5 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 transition-all duration-200"
                 >
-                  <AtSymbolIcon className="h-5 w-5 mr-2" />
+                  <EnvelopeIcon className="h-5 w-5 mr-2" />
                   Social
                 </a>
               )}
@@ -226,7 +223,7 @@ export default function ViewTalentProfile() {
                   href={`mailto:${profile.email}`}
                   className="inline-flex items-center justify-center rounded-lg bg-white/5 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 transition-all duration-200"
                 >
-                  <AtSymbolIcon className="h-5 w-5 mr-2" />
+                  <EnvelopeIcon className="h-5 w-5 mr-2" />
                   Email
                 </a>
               )}

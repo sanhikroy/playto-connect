@@ -8,7 +8,7 @@ export async function ensureDirectoryExists(directory: string): Promise<void> {
   try {
     // Check if directory exists
     await stat(directory);
-  } catch (error) {
+  } catch {
     // Directory doesn't exist, create it
     await mkdir(directory, { recursive: true });
   }

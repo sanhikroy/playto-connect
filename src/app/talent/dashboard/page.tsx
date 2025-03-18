@@ -224,7 +224,7 @@ export default function TalentDashboard() {
           
           {applications.length === 0 ? (
             <div className="bg-[#111] rounded-xl p-6 shadow-lg ring-1 ring-white/10 text-center">
-              <p className="text-gray-400 mb-4">You haven't applied to any jobs yet.</p>
+              <p className="text-gray-400 mb-4">You haven&apos;t applied to any jobs yet.</p>
                   <Link
                 href="/talent/jobs"
                 className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 transition-all duration-200"

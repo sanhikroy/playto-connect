@@ -1,10 +1,17 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { UserCircleIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import Select, { MultiValue, SingleValue, ActionMeta } from 'react-select'
+import { 
+  ArrowLeftIcon,
+  PlusIcon, 
+  XMarkIcon,
+  PaperClipIcon, 
+  TrashIcon,
+  ArrowUpTrayIcon
+} from '@heroicons/react/24/outline'
+import Select, { MultiValue, SingleValue } from 'react-select'
 import { skillOptions, experienceLevelOptions, processVideoUrl, getDefaultProfilePicture } from '@/lib/utils/talentProfile'
 
 interface TalentProfile {
@@ -87,16 +94,14 @@ export default function EditTalentProfile() {
   };
 
   const handleSkillsChange = (
-    newValue: MultiValue<{ value: string; label: string }>,
-    actionMeta: ActionMeta<{ value: string; label: string }>
+    newValue: MultiValue<{ value: string; label: string }>
   ) => {
     const skills = newValue.map(item => item.value);
     setFormData(prev => ({ ...prev, skills }));
   };
 
   const handleExperienceChange = (
-    newValue: SingleValue<{ value: string; label: string }>,
-    actionMeta: ActionMeta<{ value: string; label: string }>
+    newValue: SingleValue<{ value: string; label: string }>
   ) => {
     if (newValue) {
       setFormData(prev => ({ ...prev, experience: newValue.value }));
@@ -546,7 +551,7 @@ export default function EditTalentProfile() {
                         onClick={() => removeVideoField(index)}
                         className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white"
                       >
-                        <XMarkIcon className="h-5 w-5" />
+                        <TrashIcon className="h-5 w-5" />
                       </button>
                     </div>
                   ))}
@@ -555,7 +560,7 @@ export default function EditTalentProfile() {
                     onClick={addVideoField}
                     className="inline-flex items-center text-sm text-blue-400 hover:text-blue-300"
                   >
-                    <PlusIcon className="h-4 w-4 mr-1" />
+                    <ArrowUpTrayIcon className="h-4 w-4 mr-1" />
                     Add Another Video
                   </button>
                   <p className="text-xs text-gray-500">

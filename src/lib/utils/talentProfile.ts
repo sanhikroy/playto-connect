@@ -131,7 +131,7 @@ export function formatSkillList(skills: string): string[] {
     }
     // Otherwise split by commas
     return skills.split(',').map(s => s.trim());
-  } catch (error) {
+  } catch {
     // If parsing fails, just return as is
     return [skills];
   }

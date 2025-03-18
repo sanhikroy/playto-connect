@@ -1,20 +1,15 @@
 'use client'
 
 import { Fragment, useState } from 'react'
-import { Dialog, Disclosure, Popover, Transition } from '@headlessui/react'
+import { Dialog, Popover, Transition } from '@headlessui/react'
 import Link from 'next/link'
 import {
   Bars3Icon,
   XMarkIcon,
   UserCircleIcon,
-  ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
-
-function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(' ')
-}
 
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
