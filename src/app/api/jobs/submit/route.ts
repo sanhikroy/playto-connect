@@ -69,6 +69,9 @@ export async function POST(request: Request) {
       : []
     
     // Format the job data for database storage
+    // This would be used when the database connection is implemented
+    // We're keeping this code as a reference for future implementation
+    /* 
     const formattedJobData = {
       role: jobData.role,
       company: jobData.company,
@@ -88,6 +91,7 @@ export async function POST(request: Request) {
       referenceVideos: videos.length > 0 ? JSON.stringify(videos) : null,
       employerId: userId
     }
+    */
     
     // Create the job posting in the database
     // In a real app, you would have a Job model in your Prisma schema

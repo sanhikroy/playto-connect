@@ -7,6 +7,12 @@ import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { ensureDirectoryExists, getUploadsDirectory } from '@/lib/utils/fileStorage';
 
+// Define the update data type
+interface TalentProfileUpdate {
+  profilePicture: string;
+  updatedAt: Date;
+}
+
 // For production, you would use a cloud storage solution like AWS S3
 // This implementation uses local storage for simplicity
 export async function POST(request: Request) {
@@ -90,12 +96,14 @@ export async function POST(request: Request) {
       }
       
       // Update the talent profile with the new profile picture URL
+      const updateData: TalentProfileUpdate = {
+        profilePicture: fileUrl,
+        updatedAt: new Date()
+      };
+      
       await prisma.talentProfile.update({
         where: { id: user.talentProfile.id },
-        data: {
-          profilePicture: fileUrl,
-          updatedAt: new Date()
-        } as any // Type assertion to bypass type checking
+        data: updateData
       });
       
       return NextResponse.json({

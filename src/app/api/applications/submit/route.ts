@@ -43,9 +43,10 @@ export async function POST(request: Request) {
     // Parse request body
     const { 
       jobId, 
-      whyInterested, 
-      referenceVideo, 
-      additionalInfo 
+      whyInterested 
+      // Additional fields available but not used in this implementation
+      // referenceVideo,
+      // additionalInfo
     } = await request.json()
     
     // Validate required fields
@@ -66,7 +67,9 @@ export async function POST(request: Request) {
     
     // Get the authenticated user
     const session = await getServerSession(authOptions)
-    const userId = session?.user.id
+    // userId is not used in the current implementation but would be needed
+    // when connecting to the database
+    // const userId = session?.user.id
     
     // Create the application in the database
     // In a real app, you would have an Application model in your Prisma schema
@@ -75,7 +78,7 @@ export async function POST(request: Request) {
     // const application = await prisma.application.create({
     //   data: {
     //     jobId,
-    //     userId,
+    //     userId: session?.user.id,
     //     coverLetter: whyInterested,
     //     referenceVideo,
     //     additionalInfo,

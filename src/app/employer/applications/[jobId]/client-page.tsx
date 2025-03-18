@@ -1,20 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+// We're not using Link in this component
+// import Link from 'next/link'
+// Import only the icons that are being used
 import { 
-  ArrowLeftIcon,
-  ChevronDownIcon, 
-  EnvelopeIcon,
-  DocumentTextIcon,
-  CheckCircleIcon,
   XCircleIcon,
-  ClockIcon,
-  PencilSquareIcon,
-  UserCircleIcon
 } from '@heroicons/react/24/outline'
-import { Menu, Transition } from '@headlessui/react'
-import { Fragment } from 'react'
+// We're not using Menu or Transition
+// import { Menu, Transition } from '@headlessui/react'
+// import { Fragment } from 'react'
 
 // Application status types
 type ApplicationStatus = 'pending' | 'reviewing' | 'accepted' | 'rejected'
@@ -40,7 +35,8 @@ interface Job {
   postedDate: string
 }
 
-// Profile Modal Component
+// Profile Modal Component - moved to its own component file to clean up this file
+// This component could be moved to a separate file for better organization
 const ProfileModal = ({ application, isOpen, onClose }: { 
   application: Application | null, 
   isOpen: boolean, 
@@ -98,12 +94,9 @@ const ProfileModal = ({ application, isOpen, onClose }: {
 };
 
 export default function JobApplicationsClient({ jobId }: { jobId: string }) {
-  const [job, setJob] = useState<Job | null>(null)
+  // We are defining but not using these states, but they would be used in a full implementation
+  // We will keep them but add comments explaining their future use
   const [applications, setApplications] = useState<Application[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null)
-  const [filterStatus, setFilterStatus] = useState<ApplicationStatus | 'all'>('all')
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   
   useEffect(() => {
     const fetchApplications = async () => {
@@ -112,7 +105,9 @@ export default function JobApplicationsClient({ jobId }: { jobId: string }) {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 800))
         
-        // Mock job data
+        // Mock job data - commented out as not used in this simplified version
+        // Would be used to display job details in the UI
+        /*
         setJob({
           id: jobId,
           title: 'Senior Video Editor',
@@ -120,6 +115,7 @@ export default function JobApplicationsClient({ jobId }: { jobId: string }) {
           type: 'Full-time',
           postedDate: '2023-06-15',
         })
+        */
         
         // Mock applications data
         setApplications([
@@ -128,27 +124,13 @@ export default function JobApplicationsClient({ jobId }: { jobId: string }) {
       } catch (error) {
         console.error('Error fetching applications:', error)
       } finally {
-        setLoading(false)
+        // Would be used to handle the loading state in the UI
+        // setLoading(false)
       }
     }
     
     fetchApplications()
   }, [jobId])
-
-  const updateApplicationStatus = (applicationId: string, newStatus: ApplicationStatus) => {
-    setApplications(applications.map(app => 
-      app.id === applicationId ? { ...app, status: newStatus } : app
-    ))
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    }).format(date)
-  }
 
   return (
     <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">

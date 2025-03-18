@@ -46,7 +46,8 @@ export default function SignIn() {
         router.push('/talent/dashboard') // Default to talent dashboard
       }
       router.refresh()
-    } catch (error) {
+    } catch {
+      // Handle error by resetting loading state
       setLoading(false)
     }
   }
