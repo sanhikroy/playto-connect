@@ -126,3 +126,81 @@ npm run test:e2e
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [NextAuth.js Documentation](https://next-auth.js.org/getting-started/introduction)
 - [Vercel Documentation](https://vercel.com/docs)
+
+
+
+
+### Users Collection (`users`)
+| Field Name | Type | Required | System | Notes |
+|------------|------|----------|--------|-------|
+| id | text | ✓ | ✓ | Primary Key, 15 chars |
+| password | password | ✓ | ✓ | Min 8 chars |
+| tokenKey | text | ✓ | ✓ | 30-60 chars |
+| email | email | ✓ | ✓ | |
+| emailVisibility | bool | | ✓ | |
+| verified | bool | | ✓ | |
+| role | select | ✓ | | Values: TALENT, EMPLOYER, PENDING |
+| username | text | | | |
+| name | text | | | |
+| avatar | url | | | |
+| created | autodate | | | Auto on create |
+| updated | autodate | | | Auto on create/update |
+
+### Applications Collection (`applications`)
+| Field Name | Type | Required | System | Notes |
+|------------|------|----------|--------|-------|
+| id | text | ✓ | ✓ | Primary Key, 15 chars |
+| cover_letter | text | | | |
+| status | select | | | Values: PENDING, REVIEWING, ACCEPTED, REJECTED |
+| job | relation | | | References jobs collection |
+| talent | relation | | | References users collection |
+| created | autodate | | | Auto on create |
+| updated | autodate | | | Auto on create/update |
+
+### Employer Profiles Collection (`employer_profiles`)
+| Field Name | Type | Required | System | Notes |
+|------------|------|----------|--------|-------|
+| id | text | ✓ | ✓ | Primary Key, 15 chars |
+| user | relation | | | References users collection |
+| company_name | text | | | |
+| company_description | text | | | |
+| industry | text | | | |
+| website | url | | | |
+| location | text | | | |
+| size | text | | | |
+| is_complete | bool | | | |
+| created | autodate | | | Auto on create |
+| updated | autodate | | | Auto on create/update |
+
+### Jobs Collection (`jobs`)
+| Field Name | Type | Required | System | Notes |
+|------------|------|----------|--------|-------|
+| id | text | ✓ | ✓ | Primary Key, 15 chars |
+| title | text | | | |
+| description | text | | | |
+| requirements | text | | | |
+| salary | text | | | |
+| location | text | | | |
+| is_remote | bool | | | |
+| type | text | | | |
+| role | text | | | |
+| employer | relation | | | References users collection |
+| created | autodate | | | Auto on create |
+| updated | autodate | | | Auto on create/update |
+
+### Talent Profiles Collection (`talent_profiles`)
+| Field Name | Type | Required | System | Notes |
+|------------|------|----------|--------|-------|
+| id | text | ✓ | ✓ | Primary Key, 15 chars |
+| user | relation | | | References users collection |
+| title | text | | | |
+| bio | text | | | |
+| skills | json | | | |
+| experience | text | | | |
+| portfolio_url | url | | | |
+| social_media_url | url | | | |
+| portfolio_videos | json | | | |
+| is_complete | bool | | | |
+| created | autodate | | | Auto on create |
+| updated | autodate | | | Auto on create/update |
+
