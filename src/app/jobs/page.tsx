@@ -24,6 +24,15 @@ interface Role {
   status: boolean;
 }
 
+interface Employer {
+  company_name: string;
+  company_description: string;
+  industry: string;
+  website: string;
+  location: string;
+  size: string;
+}
+
 interface JobWithEmployer {
   id: string;
   title: string;
@@ -43,14 +52,11 @@ interface JobWithEmployer {
   website: string;
   employer_location: string;
   size: string;
-}
-
-interface PaginatedResponse {
-  page: number;
-  per_page: number;
-  total_items: number;
-  total_pages: number;
-  items: JobWithEmployer[];
+  collectionId?: string;
+  collectionName?: string;
+  expand?: {
+    employer_id?: Employer;
+  };
 }
 
 const locations = [
@@ -123,36 +129,45 @@ export default function JobsPage() {
   // Fetch jobs from custom API with filters
   useEffect(() => {
     async function fetchJobs() {
+      setIsLoading(true)
       try {
-        setIsLoading(true)
+        const filter = []
         
-        // Build query params
-        const params = new URLSearchParams({
-          page: currentPage.toString(),
-          per_page: perPage.toString()
-        })
-        
-        // Add filters if not 'all'
         if (selectedRole !== 'all') {
-          const roleSlug = roles.find(r => r.id === selectedRole)?.slug
-          if (roleSlug) params.append('role', roleSlug)
+          const roleName = roles.find(r => r.id === selectedRole)?.name
+          if (roleName) filter.push(`role = "${roleName}"`)
         }
         
         if (selectedLocation !== 'all') {
-          params.append('remote', selectedLocation === 'remote' ? 'true' : 'false')
+          filter.push(`is_remote = ${selectedLocation === 'remote'}`)
         }
         
         if (selectedJobType !== 'all') {
           const typeName = jobTypes.find(t => t.id === selectedJobType)?.name
-          if (typeName) params.append('type', typeName)
+          if (typeName) filter.push(`type = "${typeName}"`)
         }
 
-        const response = await pb.send(`/api/custom/jobs-with-employers?${params.toString()}`, {
-          method: 'GET'
+        const filterStr = filter.length > 0 ? filter.join(' && ') : ''
+        
+        const resultList = await pb.collection('jobs').getList(currentPage, perPage, {
+          filter: filterStr,
+          expand: 'employer_id',
+          sort: '-created'
         });
-        const data = response as PaginatedResponse;
-        setJobs(data.items)
-        setTotalJobs(data.total_items)
+
+        // Transform the response to match our expected format
+        const transformedJobs = resultList.items.map(job => ({
+          ...job,
+          company_name: job.expand?.employer_id?.company_name || '',
+          company_description: job.expand?.employer_id?.company_description || '',
+          industry: job.expand?.employer_id?.industry || '',
+          website: job.expand?.employer_id?.website || '',
+          employer_location: job.expand?.employer_id?.location || '',
+          size: job.expand?.employer_id?.size || ''
+        })) as JobWithEmployer[];
+
+        setJobs(transformedJobs)
+        setTotalJobs(resultList.totalItems)
       } catch (err) {
         console.error('Error fetching jobs:', err)
       } finally {

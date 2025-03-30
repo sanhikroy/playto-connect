@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { cookies } from 'next/headers'
+import { pb } from '@/lib/pocketbase'
 import prisma from '@/lib/prisma'
 
 export async function PUT(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    // Get PocketBase auth from cookies
+    const cookieStore = await cookies()
+    pb.authStore.loadFromCookie(cookieStore.get('pb_auth')?.value || '')
 
-    if (!session || !session.user) {
+    // Check if user is authenticated
+    if (!pb.authStore.isValid || !pb.authStore.model) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
@@ -16,7 +19,7 @@ export async function PUT(request: Request) {
 
     // Verify user is a talent
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: pb.authStore.model.id },
       include: { talentProfile: true }
     })
 
@@ -91,9 +94,12 @@ export async function PUT(request: Request) {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    // Get PocketBase auth from cookies
+    const cookieStore = await cookies()
+    pb.authStore.loadFromCookie(cookieStore.get('pb_auth')?.value || '')
 
-    if (!session || !session.user) {
+    // Check if user is authenticated
+    if (!pb.authStore.isValid || !pb.authStore.model) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
@@ -102,7 +108,7 @@ export async function GET() {
 
     // Verify user is a talent
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: pb.authStore.model.id },
       include: { talentProfile: true }
     })
 

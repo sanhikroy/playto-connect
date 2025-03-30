@@ -9,16 +9,14 @@ import {
   UserCircleIcon,
 } from '@heroicons/react/24/outline'
 import { usePathname } from 'next/navigation'
-import { useSession, signOut } from 'next-auth/react'
+import { useAuth } from '@/components/providers/AuthProvider'
 
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
-  const { data: session, status } = useSession()
+  const { user, isLoading, isAuthenticated, logout } = useAuth()
 
   const isHomepage = pathname === '/'
-  const isLoading = status === 'loading'
-  const isAuthenticated = status === 'authenticated'
 
   const handleHowItWorksClick = (e: React.MouseEvent) => {
     if (isHomepage) {
@@ -28,13 +26,13 @@ export function Navigation() {
   }
 
   const handleSignOut = async () => {
-    await signOut({ redirect: true, callbackUrl: '/' })
+    logout()
   }
 
   // Function to get the dashboard link based on user role
   const getDashboardLink = () => {
-    if (!session) return '/talent/dashboard'
-    return session.user.role === 'EMPLOYER' ? '/employer/dashboard' : '/talent/dashboard'
+    if (!user) return '/talent/dashboard'
+    return user.role === 'EMPLOYER' ? '/employer/dashboard' : '/talent/dashboard'
   }
 
   return (
@@ -84,7 +82,7 @@ export function Navigation() {
               <Popover className="relative">
                 <Popover.Button className="flex items-center gap-x-1 text-sm font-medium leading-6 text-white/80 hover:text-white transition-colors outline-none">
                   <UserCircleIcon className="h-6 w-6" aria-hidden="true" />
-                  <span>{session?.user?.name || 'Account'}</span>
+                  <span>{user?.name || 'Account'}</span>
                 </Popover.Button>
 
                 <Transition
@@ -186,7 +184,7 @@ export function Navigation() {
                     <div className="px-3 py-2 mb-4">
                       <div className="flex items-center">
                         <UserCircleIcon className="h-6 w-6 text-white mr-2" aria-hidden="true" />
-                        <span className="text-base font-medium text-white">{session?.user?.name || 'Account'}</span>
+                        <span className="text-base font-medium text-white">{user?.name || 'Account'}</span>
                       </div>
                     </div>
                     <Link
@@ -203,7 +201,7 @@ export function Navigation() {
                     </Link>
                     <button
                       onClick={handleSignOut}
-                      className="-mx-3 w-full text-left block rounded-lg px-3 py-2 text-base font-medium text-white/80 hover:bg-white/5 hover:text-white"
+                      className="-mx-3 block w-full text-left rounded-lg px-3 py-2 text-base font-medium text-white/80 hover:bg-white/5 hover:text-white"
                     >
                       Sign out
                     </button>
@@ -213,12 +211,14 @@ export function Navigation() {
                     <Link
                       href="/auth/signin"
                       className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium text-white/80 hover:bg-white/5 hover:text-white"
+                      onClick={() => setMobileMenuOpen(false)}
                     >
                       Sign in
                     </Link>
                     <Link
                       href="/auth/signup"
-                      className="-mx-3 block rounded-lg px-3 py-2.5 mt-2 text-base font-medium text-center bg-white text-black hover:bg-gray-100"
+                      className="-mx-3 block rounded-lg px-3 py-2 text-base font-medium text-white/80 hover:bg-white/5 hover:text-white"
+                      onClick={() => setMobileMenuOpen(false)}
                     >
                       Sign up
                     </Link>

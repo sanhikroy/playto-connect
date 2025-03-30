@@ -23,262 +23,68 @@ import {
   LinkIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/components/providers/AuthProvider'
 import { saveJobApplication, getJobApplication, clearJobApplication } from '@/lib/utils/formStorage'
 import { useToasts, ToastContainer } from '@/components/notifications/Toasts'
+import { pb } from '@/lib/pocketbase'
+import { ClientResponseError } from 'pocketbase'
+import { ApplicationStatus } from '@/types/application'
 
-const jobsData = [
-  {
-    id: 1,
-    role: 'Video Editor',
-    company: 'Creative Studios Inc.',
-    companyWebsite: 'https://creativestudios.com',
-    socialMediaUrl: 'https://instagram.com/creativestudios',
-    location: 'Remote',
-    isRemote: true,
-    jobType: 'Full-time',
-    salaryMin: '4,000',
-    salaryMax: '7,000',
-    salaryCurrency: 'USD',
-    description: 'Looking for an experienced video editor to join our creative team. You will be responsible for editing YouTube videos, creating engaging content, and working with our content creators.',
-    postedAt: '3d ago',
-    icon: VideoCameraIcon,
-    requirements: [
-      'Proficiency in Adobe Premiere Pro and After Effects',
-      'At least 2 years of experience editing video content',
-      'Understanding of YouTube best practices',
-      'Portfolio demonstrating video editing skills',
-      'Ability to work to tight deadlines'
-    ],
-    responsibilities: [
-      'Edit raw footage into engaging, high-quality videos',
-      'Add effects, graphics, music, and sound design',
-      'Collaborate with content creators to realize their vision',
-      'Optimize videos for YouTube performance',
-      'Stay up-to-date with latest editing techniques and trends'
-    ],
-    referenceVideos: [
-      'https://www.youtube.com/watch?v=example1',
-      'https://www.youtube.com/watch?v=example2',
-      'https://www.instagram.com/p/example3',
-    ]
-  },
-  {
-    id: 2,
-    role: 'Graphic Designer',
-    company: 'Design Agency Co.',
-    companyWebsite: 'https://designagency.com',
-    socialMediaUrl: 'https://instagram.com/designagency',
-    location: 'New York, NY',
-    isRemote: false,
-    jobType: 'Contract',
-    salaryMin: '4,000',
-    salaryMax: '6,000',
-    salaryCurrency: 'USD',
-    description: 'Seeking a talented graphic designer for branding and marketing projects. You will create visuals for YouTube thumbnails, channel art, and promotional materials for our clients.',
-    postedAt: '1w ago',
-    icon: PaintBrushIcon,
-    requirements: [
-      'Expert in Photoshop and Illustrator',
-      'Strong understanding of design principles',
-      'Experience creating YouTube thumbnails and channel art',
-      'Portfolio showing diverse design skills',
-      'Ability to iterate based on client feedback'
-    ],
-    responsibilities: [
-      'Design eye-catching YouTube thumbnails',
-      'Create channel art and branding elements',
-      'Develop promotional materials for social media',
-      'Maintain brand consistency across deliverables',
-      'Work with clients to understand their needs'
-    ],
-    referenceVideos: [
-      'https://www.youtube.com/watch?v=example1',
-      'https://www.instagram.com/p/example2',
-    ]
-  },
-  {
-    id: 3,
-    role: 'Content Creator',
-    company: 'TechTube',
-    location: 'Remote',
-    jobType: 'Full-time',
-    salary: '$60,000 - $85,000',
-    description: 'Join our team as a technology content creator. You will script, shoot, and edit videos about the latest tech products and trends for our YouTube channel with over 2 million subscribers.',
-    postedAt: '2d ago',
-    icon: DocumentTextIcon,
-    requirements: [
-      'Deep knowledge of consumer technology',
-      'On-camera presence and communication skills',
-      'Experience creating video content',
-      'Understanding of YouTube SEO and analytics',
-      'Ability to research and stay current on tech trends'
-    ],
-    responsibilities: [
-      'Research and pitch video ideas',
-      'Script, shoot, and edit tech review videos',
-      'Present tech products in an engaging way',
-      'Collaborate with brands on sponsored content',
-      'Analyze performance metrics to improve content'
-    ]
-  },
-  {
-    id: 4,
-    role: 'Motion Graphics Designer',
-    company: 'Animation Studios',
-    location: 'Los Angeles, CA',
-    jobType: 'Full-time',
-    salary: '$70,000 - $90,000',
-    description: 'Create stunning motion graphics and animations for YouTube content. Experience with After Effects and Cinema 4D required. Join a team working with top creators and brands.',
-    postedAt: '5d ago',
-    icon: FilmIcon,
-    requirements: [
-      'Expert in After Effects and Cinema 4D',
-      'Understanding of animation principles',
-      'Experience with character animation a plus',
-      'Portfolio demonstrating motion graphics work',
-      'Ability to meet tight deadlines'
-    ],
-    responsibilities: [
-      'Create animated intros, outros, and transitions',
-      'Design motion graphics elements for videos',
-      'Animate logos and branding elements',
-      'Collaborate with editors on visual effects',
-      'Stay current with animation trends and techniques'
-    ]
-  },
-  {
-    id: 5,
-    role: 'YouTube Channel Manager',
-    company: 'Influence Media',
-    location: 'Remote',
-    jobType: 'Part-time',
-    salary: '$25-35/hr',
-    description: 'Manage all aspects of growing YouTube channels including content planning, SEO optimization, community engagement, and analytics tracking. Looking for someone with proven experience.',
-    postedAt: '2w ago',
-    icon: UsersIcon,
-    requirements: [
-      'Proven track record growing YouTube channels',
-      'Understanding of YouTube algorithm and best practices',
-      'Experience with YouTube analytics and SEO',
-      'Strong communication and organization skills',
-      'Knowledge of content strategy and planning'
-    ],
-    responsibilities: [
-      'Develop and implement channel growth strategies',
-      'Optimize videos for search and discoverability',
-      'Manage content calendar and publishing schedule',
-      'Engage with audience and build community',
-      'Analyze performance metrics and adjust strategy'
-    ]
-  },
-  {
-    id: 6,
-    role: 'Music Producer',
-    company: 'SoundWave Productions',
-    location: 'Remote',
-    jobType: 'Contract',
-    salary: '$45-65/hr',
-    description: 'Create original soundtracks and audio for YouTube creators. Experience with digital audio workstations and audio engineering required.',
-    postedAt: '1d ago',
-    icon: MusicalNoteIcon,
-    requirements: [
-      'Proficiency in digital audio workstations (Logic Pro, Ableton, etc.)',
-      'At least 3 years of music production experience',
-      'Knowledge of sound design and audio engineering',
-      'Experience creating music for video content',
-      'Understanding of copyright and licensing for music'
-    ],
-    responsibilities: [
-      'Compose original music for YouTube videos',
-      'Create sound effects and audio elements',
-      'Mix and master audio to professional standards',
-      'Collaborate with creators to understand their vision',
-      'Meet tight deadlines for content production'
-    ]
-  },
-  {
-    id: 7,
-    role: 'Game Content Creator',
-    company: 'GameStream Network',
-    location: 'Remote',
-    jobType: 'Full-time',
-    salary: '$55,000 - $75,000',
-    description: 'Create gaming content for our YouTube channel with over 1 million subscribers. Extensive knowledge of popular games and strong on-camera presence required.',
-    postedAt: '4d ago',
-    icon: PuzzlePieceIcon,
-    requirements: [
-      'Deep knowledge of current gaming trends and popular titles',
-      'Strong on-camera personality and communication skills',
-      'Experience creating gaming content (streaming, videos, etc.)',
-      'Basic video editing skills',
-      'Understanding of YouTube gaming community'
-    ],
-    responsibilities: [
-      'Create engaging gameplay videos and commentary',
-      'Stay current with new game releases and trends',
-      'Interact with viewers and build community',
-      'Collaborate with other creators for special content',
-      'Maintain consistent posting schedule'
-    ]
-  },
-  {
-    id: 8,
-    role: 'Videographer',
-    company: 'Visual Media Group',
-    location: 'Chicago, IL',
-    jobType: 'Full-time',
-    salary: '$60,000 - $80,000',
-    description: 'Shoot high-quality video content for our YouTube network. Experience with professional camera equipment and lighting required.',
-    postedAt: '1w ago',
-    icon: CameraIcon,
-    requirements: [
-      'Proficiency with professional camera equipment',
-      'Understanding of lighting and composition',
-      'Experience with video production workflows',
-      'Portfolio demonstrating videography skills',
-      'Ability to travel for shoots when needed'
-    ],
-    responsibilities: [
-      'Set up and operate camera equipment for shoots',
-      'Design and implement lighting setups',
-      'Work with directors to achieve desired visual style',
-      'Ensure high-quality footage is captured',
-      'Manage equipment and maintain shooting schedule'
-    ]
-  },
-  {
-    id: 9,
-    role: 'Web Developer',
-    company: 'TechTube',
-    location: 'Remote',
-    jobType: 'Full-time',
-    salary: '$80,000 - $110,000',
-    description: 'Develop and maintain web applications for our content creation platform. Experience with React, Next.js, and API development required.',
-    postedAt: '3d ago',
-    icon: ComputerDesktopIcon,
-    requirements: [
-      'Proficiency in React and Next.js',
-      'Experience with TypeScript and modern JavaScript',
-      'Understanding of REST APIs and data fetching',
-      'Knowledge of UI/UX principles and responsive design',
-      'Familiarity with version control and CI/CD'
-    ],
-    responsibilities: [
-      'Develop new features for our content platform',
-      'Maintain and improve existing codebase',
-      'Optimize application performance and accessibility',
-      'Collaborate with design and backend teams',
-      'Implement and test new functionality'
-    ]
-  }
-]
+interface Employer {
+  id: string;
+  company_name: string;
+  company_description: string;
+  industry: string;
+  website: string;
+  location: string;
+  size: string;
+  social_media?: string;
+}
+
+interface JobWithEmployer {
+  id: string;
+  title: string;
+  description: string;
+  requirements: string;
+  salary: string;
+  location: string;
+  is_remote: boolean;
+  type: string;
+  role: string;
+  created: string;
+  updated: string;
+  employer_id: string;
+  company_name: string;
+  company_description: string;
+  industry: string;
+  website: string;
+  employer_location: string;
+  size: string;
+  social_media?: string;
+  collectionId: string;
+  collectionName: string;
+  expand?: {
+    employer_id?: Employer;
+  };
+}
+
+const roleIcons = {
+  'video-editor': VideoCameraIcon,
+  'graphic-designer': PaintBrushIcon,
+  'content-creator': DocumentTextIcon,
+  'motion-graphics': FilmIcon,
+  'channel-manager': UsersIcon,
+  'music-producer': MusicalNoteIcon,
+  'game-creator': PuzzlePieceIcon,
+  'videographer': CameraIcon,
+  'web-developer': ComputerDesktopIcon,
+}
 
 export default function JobDetail() {
   const { id } = useParams()
   const router = useRouter()
-  const { data: session, status } = useSession()
-  const [job, setJob] = useState<any>(null)
+  const { user, isLoading, isAuthenticated } = useAuth()
+  const [job, setJob] = useState<JobWithEmployer | null>(null)
   const [loading, setLoading] = useState(true)
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false)
   const [formData, setFormData] = useState({
@@ -296,26 +102,70 @@ export default function JobDetail() {
   const { toasts, addToast, removeToast } = useToasts()
 
   useEffect(() => {
-    // Find job by ID
-    const numId = parseInt(id as string)
-    const foundJob = jobsData.find(job => job.id === numId)
-    
-    if (foundJob) {
-      setJob(foundJob)
+    async function fetchJob() {
+      try {
+        const record = await pb.collection('jobs').getOne(id as string, {
+          expand: 'employer_id',
+          requestKey: `getJob_${id}`
+        });
+
+        // Transform the response to match our expected format
+        const transformedJob: JobWithEmployer = {
+          id: record.id,
+          title: record.title,
+          description: record.description,
+          requirements: record.requirements,
+          salary: record.salary,
+          location: record.location,
+          is_remote: record.is_remote,
+          type: record.type,
+          role: record.role,
+          created: record.created,
+          updated: record.updated,
+          employer_id: record.employer_id,
+          company_name: record.expand?.employer_id?.company_name || '',
+          company_description: record.expand?.employer_id?.company_description || '',
+          industry: record.expand?.employer_id?.industry || '',
+          website: record.expand?.employer_id?.website || '',
+          employer_location: record.expand?.employer_id?.location || '',
+          size: record.expand?.employer_id?.size || '',
+          social_media: record.expand?.employer_id?.social_media,
+          collectionId: record.collectionId,
+          collectionName: record.collectionName,
+          expand: record.expand ? {
+            employer_id: record.expand.employer_id as Employer
+          } : undefined
+        };
+
+        setJob(transformedJob)
+      } catch (err) {
+        // Ignore auto-cancellation errors
+        if (err instanceof ClientResponseError && err.status === 0) {
+          return;
+        }
+        console.error('Error fetching job:', err)
+      } finally {
+        setLoading(false)
+      }
     }
-    
-    setLoading(false)
+
+    fetchJob()
     
     // Check for saved application data
     const savedApplication = getJobApplication(id as string)
     if (savedApplication) {
       setFormData(savedApplication)
     }
-  }, [id])
+
+    // Cancel any pending requests when unmounting
+    return () => {
+      pb.cancelRequest(`getJob_${id}`);
+    };
+  }, [id]);
 
   // Handle redirect after form completion if user is not authenticated
   useEffect(() => {
-    if (redirectToAuth && status !== 'loading') {
+    if (redirectToAuth && !isLoading) {
       // Save current form data before redirecting
       saveJobApplication(id as string, formData)
       
@@ -323,7 +173,7 @@ export default function JobDetail() {
       const callbackUrl = `/jobs/${id}?apply=true`
       router.push(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`)
     }
-  }, [redirectToAuth, status, id, router, formData])
+  }, [redirectToAuth, isLoading, id, router, formData]);
 
   // Check URL params on load to see if we should open the apply modal
   useEffect(() => {
@@ -341,11 +191,6 @@ export default function JobDetail() {
     if (name in formErrors) {
       setFormErrors(prev => ({ ...prev, [name]: '' }))
     }
-  }
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null
-    setFormData(prev => ({ ...prev, resumeFile: file }))
   }
 
   const validateForm = () => {
@@ -375,7 +220,7 @@ export default function JobDetail() {
     addToast('Application data saved', 'info')
     
     // Check if user is authenticated
-    if (status !== 'authenticated') {
+    if (!isAuthenticated) {
       // Set flag to redirect to auth page
       setRedirectToAuth(true)
       return
@@ -386,44 +231,27 @@ export default function JobDetail() {
     setSubmitError('')
     
     try {
-      // Get CSRF token
-      const csrfResponse = await fetch('/api/csrf')
-      const { csrfToken } = await csrfResponse.json()
-      
       // Submit application to API
-      const response = await fetch('/api/applications/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-csrf-token': csrfToken
-        },
-        body: JSON.stringify({
-          jobId: id,
-          whyInterested: formData.whyInterested,
-          referenceVideo: formData.referenceVideo,
-          additionalInfo: formData.additionalInfo
-        })
+      const response = await pb.collection('applications').create({
+        job: id,
+        talent: user?.id,
+        cover_letter: formData.whyInterested,
+        status: ApplicationStatus.PENDING,
+        // Only include additional fields if they have content
+        ...(formData.referenceVideo && { reference_video: formData.referenceVideo }),
+        ...(formData.additionalInfo && { additional_info: formData.additionalInfo })
       })
       
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to submit application')
+      if (!response) {
+        throw new Error('Failed to submit application')
       }
-      
+
       // Clear saved application data
       clearJobApplication(id as string)
-      addToast('Application submitted successfully', 'success')
       
+      // Show success message and close modal
       setSubmitSuccess(true)
-      
-      // Reset form after success
-      setFormData({
-        whyInterested: '',
-        referenceVideo: '',
-        additionalInfo: ''
-      })
-      
-      // Close modal after 2 seconds
+      addToast('Application submitted successfully!', 'success')
       setTimeout(() => {
         setIsApplyModalOpen(false)
         setSubmitSuccess(false)
@@ -431,7 +259,7 @@ export default function JobDetail() {
       
     } catch (error) {
       console.error('Error submitting application:', error)
-      setSubmitError(error instanceof Error ? error.message : 'Failed to submit application. Please try again.')
+      setSubmitError('Failed to submit application. Please try again.')
       addToast('Failed to submit application', 'error')
     } finally {
       setSubmitting(false)
@@ -468,13 +296,28 @@ export default function JobDetail() {
     )
   }
 
-  const JobIcon = job.icon
+  const JobIcon = roleIcons[job.role as keyof typeof roleIcons] || DocumentTextIcon
 
   // Update the submit button text based on authentication status
   const getSubmitButtonText = () => {
     if (submitting) return 'Submitting...'
-    if (status !== 'authenticated') return 'Continue to Sign In'
+    if (submitSuccess) return 'Application Submitted!'
+    if (!isAuthenticated) return 'Sign in to Apply'
     return 'Submit Application'
+  }
+
+  // Format the posted date
+  const formatPostedDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - date.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays}d ago`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
+    return `${Math.floor(diffDays / 30)}mo ago`
   }
 
   return (
@@ -499,39 +342,39 @@ export default function JobDetail() {
                 <JobIcon className="h-10 w-10 text-blue-400" />
               </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">{job.role}</h1>
-              <p className="text-gray-400 mb-6">{job.company}</p>
+            <div className="flex-grow">
+              <h1 className="text-2xl font-bold text-white">{job.title}</h1>
+              <p className="text-gray-400 mb-6">{job.company_name}</p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3">
                 <div className="flex items-center text-gray-400">
                   <MapPinIcon className="h-5 w-5 mr-2 text-gray-400" />
                   <span>{job.location}</span>
                 </div>
                 <div className="flex items-center text-gray-400">
                   <BriefcaseIcon className="h-5 w-5 mr-2 text-gray-400" />
-                  <span>{job.jobType} {job.isRemote && '• Remote'}</span>
+                  <span className="capitalize">{job.type} {job.is_remote && '• Remote'}</span>
                 </div>
                 <div className="flex items-center text-gray-400">
                   <ClockIcon className="h-5 w-5 mr-2 text-gray-400" />
-                  <span>Posted {job.postedAt}</span>
+                  <span>Posted {formatPostedDate(job.created)}</span>
                 </div>
                 <div className="flex items-center text-gray-400">
                   <CurrencyDollarIcon className="h-5 w-5 mr-2 text-gray-400" />
-                  <span>{job.salaryCurrency} {job.salaryMin} - {job.salaryMax} per month</span>
+                  <span>{job.salary}</span>
                 </div>
-                {job.companyWebsite && (
+                {job.website && (
                   <div className="flex items-center text-gray-400">
                     <GlobeAltIcon className="h-5 w-5 mr-2 text-gray-400" />
-                    <a href={job.companyWebsite} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                    <a href={job.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
                       Company Website
                     </a>
                   </div>
                 )}
-                {job.socialMediaUrl && (
+                {job.social_media && (
                   <div className="flex items-center text-gray-400">
                     <LinkIcon className="h-5 w-5 mr-2 text-gray-400" />
-                    <a href={job.socialMediaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                    <a href={job.social_media} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
                       Social Media
                     </a>
                   </div>
@@ -550,28 +393,46 @@ export default function JobDetail() {
         </div>
 
         {/* Reference Videos */}
-        {job.referenceVideos && job.referenceVideos.length > 0 && (
-          <div className="mb-10">
-            <h2 className="text-xl font-bold text-white mb-4">Reference Videos</h2>
-            <div className="rounded-xl bg-[#111] p-6">
-              <div className="space-y-4">
-                {job.referenceVideos.map((videoUrl: string, index: number) => (
-                  <div key={index}>
-                    <a 
-                      href={videoUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 flex items-center"
-                    >
-                      <VideoCameraIcon className="h-5 w-5 mr-2" />
-                      <span>Reference Video #{index + 1}</span>
-                    </a>
-                  </div>
-                ))}
+        <div className="mb-10">
+          <h2 className="text-xl font-bold text-white mb-4">Reference Videos</h2>
+          <div className="rounded-xl bg-[#111] p-6">
+            <div className="space-y-4">
+              <div>
+                <a 
+                  href="#"
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 flex items-center"
+                >
+                  <VideoCameraIcon className="h-5 w-5 mr-2" />
+                  <span>Reference Video #1</span>
+                </a>
+              </div>
+              <div>
+                <a 
+                  href="#"
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 flex items-center"
+                >
+                  <VideoCameraIcon className="h-5 w-5 mr-2" />
+                  <span>Reference Video #2</span>
+                </a>
+              </div>
+              <div>
+                <a 
+                  href="#"
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 flex items-center"
+                >
+                  <VideoCameraIcon className="h-5 w-5 mr-2" />
+                  <span>Reference Video #3</span>
+                </a>
               </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Apply Button */}
         <div className="flex justify-center my-12">
@@ -617,7 +478,7 @@ export default function JobDetail() {
                       as="h3"
                       className="text-xl font-semibold leading-6 text-white"
                     >
-                      Apply for {job.role} at {job.company}
+                      Apply for {job.title} at {job.company_name}
                     </Dialog.Title>
                     <button
                       type="button"
