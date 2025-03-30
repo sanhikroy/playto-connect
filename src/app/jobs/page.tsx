@@ -14,19 +14,44 @@ import {
   AdjustmentsHorizontalIcon
 } from '@heroicons/react/24/outline'
 import Link from 'next/link'
+import { pb } from '@/lib/pocketbase'
+import { LoadingSpinner } from '@/lib/utils/loadingStates'
 
-const roles = [
-  { id: 'all', name: 'All Roles' },
-  { id: 'video-editor', name: 'Video Editor' },
-  { id: 'graphic-designer', name: 'Graphic Designer' },
-  { id: 'content-creator', name: 'Content Creator' },
-  { id: 'motion-graphics', name: 'Motion Graphics Designer' },
-  { id: 'channel-manager', name: 'YouTube Channel Manager' },
-  { id: 'music-producer', name: 'Music Producer' },
-  { id: 'game-creator', name: 'Game Content Creator' },
-  { id: 'videographer', name: 'Videographer' },
-  { id: 'web-developer', name: 'Web Developer' },
-]
+interface Role {
+  id: string;
+  name: string;
+  slug: string;
+  status: boolean;
+}
+
+interface JobWithEmployer {
+  id: string;
+  title: string;
+  description: string;
+  requirements: string;
+  salary: string;
+  location: string;
+  is_remote: boolean;
+  type: string;
+  role: string;
+  created: string;
+  updated: string;
+  employer_id: string;
+  company_name: string;
+  company_description: string;
+  industry: string;
+  website: string;
+  employer_location: string;
+  size: string;
+}
+
+interface PaginatedResponse {
+  page: number;
+  per_page: number;
+  total_items: number;
+  total_pages: number;
+  items: JobWithEmployer[];
+}
 
 const locations = [
   { id: 'all', name: 'All Locations' },
@@ -42,158 +67,114 @@ const jobTypes = [
   { id: 'internship', name: 'Internship' },
 ]
 
-const jobs = [
-  {
-    id: 1,
-    role: 'Video Editor',
-    roleId: 'video-editor',
-    company: 'Creative Studios Inc.',
-    location: 'Remote',
-    locationId: 'remote',
-    jobType: 'Full-time',
-    jobTypeId: 'full-time',
-    salary: '$50,000 - $70,000',
-    description: 'Looking for an experienced video editor to join our creative team. You will be responsible for editing YouTube videos, creating engaging content, and working with our content creators.',
-    postedAt: '3d ago',
-    icon: VideoCameraIcon
-  },
-  {
-    id: 2,
-    role: 'Graphic Designer',
-    roleId: 'graphic-designer',
-    company: 'Design Agency Co.',
-    location: 'New York, NY',
-    locationId: 'onsite',
-    jobType: 'Contract',
-    jobTypeId: 'contract',
-    salary: '$40-60/hr',
-    description: 'Seeking a talented graphic designer for branding and marketing projects. You will create visuals for YouTube thumbnails, channel art, and promotional materials for our clients.',
-    postedAt: '1w ago',
-    icon: PaintBrushIcon
-  },
-  {
-    id: 3,
-    role: 'Content Creator',
-    roleId: 'content-creator',
-    company: 'TechTube',
-    location: 'Remote',
-    locationId: 'remote',
-    jobType: 'Full-time',
-    jobTypeId: 'full-time',
-    salary: '$60,000 - $85,000',
-    description: 'Join our team as a technology content creator. You will script, shoot, and edit videos about the latest tech products and trends for our YouTube channel with over 2 million subscribers.',
-    postedAt: '2d ago',
-    icon: DocumentTextIcon
-  },
-  {
-    id: 4,
-    role: 'Motion Graphics Designer',
-    roleId: 'motion-graphics',
-    company: 'Animation Studios',
-    location: 'Los Angeles, CA',
-    locationId: 'onsite',
-    jobType: 'Full-time',
-    jobTypeId: 'full-time',
-    salary: '$70,000 - $90,000',
-    description: 'Create stunning motion graphics and animations for YouTube content. Experience with After Effects and Cinema 4D required. Join a team working with top creators and brands.',
-    postedAt: '5d ago',
-    icon: FilmIcon
-  },
-  {
-    id: 5,
-    role: 'YouTube Channel Manager',
-    roleId: 'channel-manager',
-    company: 'Influence Media',
-    location: 'Remote',
-    locationId: 'remote',
-    jobType: 'Part-time',
-    jobTypeId: 'part-time',
-    salary: '$25-35/hr',
-    description: 'Manage all aspects of growing YouTube channels including content planning, SEO optimization, community engagement, and analytics tracking. Looking for someone with proven experience.',
-    postedAt: '2w ago',
-    icon: UsersIcon
-  },
-  {
-    id: 6,
-    role: 'Music Producer',
-    roleId: 'music-producer',
-    company: 'SoundWave Productions',
-    location: 'Remote',
-    locationId: 'remote',
-    jobType: 'Contract',
-    jobTypeId: 'contract',
-    salary: '$45-65/hr',
-    description: 'Create original soundtracks and audio for YouTube creators. Experience with digital audio workstations and audio engineering required.',
-    postedAt: '1d ago',
-    icon: MusicalNoteIcon
-  },
-  {
-    id: 7,
-    role: 'Game Content Creator',
-    roleId: 'game-creator',
-    company: 'GameStream Network',
-    location: 'Remote',
-    locationId: 'remote',
-    jobType: 'Full-time',
-    jobTypeId: 'full-time',
-    salary: '$55,000 - $75,000',
-    description: 'Create gaming content for our YouTube channel with over 1 million subscribers. Extensive knowledge of popular games and strong on-camera presence required.',
-    postedAt: '4d ago',
-    icon: PuzzlePieceIcon
-  },
-  {
-    id: 8,
-    role: 'Videographer',
-    roleId: 'videographer',
-    company: 'Visual Media Group',
-    location: 'Chicago, IL',
-    locationId: 'onsite',
-    jobType: 'Full-time',
-    jobTypeId: 'full-time',
-    salary: '$60,000 - $80,000',
-    description: 'Shoot high-quality video content for our YouTube network. Experience with professional camera equipment and lighting required.',
-    postedAt: '1w ago',
-    icon: CameraIcon
-  },
-  {
-    id: 9,
-    role: 'Web Developer',
-    roleId: 'web-developer',
-    company: 'TechTube',
-    location: 'Remote',
-    locationId: 'remote',
-    jobType: 'Full-time',
-    jobTypeId: 'full-time',
-    salary: '$80,000 - $110,000',
-    description: 'Develop and maintain web applications for our content creation platform. Experience with React, Next.js, and API development required.',
-    postedAt: '3d ago',
-    icon: ComputerDesktopIcon
-  }
-]
+const roleIcons = {
+  'video-editor': VideoCameraIcon,
+  'graphic-designer': PaintBrushIcon,
+  'content-creator': DocumentTextIcon,
+  'motion-graphics': FilmIcon,
+  'channel-manager': UsersIcon,
+  'music-producer': MusicalNoteIcon,
+  'game-creator': PuzzlePieceIcon,
+  'videographer': CameraIcon,
+  'web-developer': ComputerDesktopIcon,
+}
+
+// Helper function to format salary
+const formatSalary = (salaryStr: string | undefined | null) => {
+  if (!salaryStr) return 'Salary not specified'
+  return salaryStr
+}
 
 export default function JobsPage() {
+  const [roles, setRoles] = useState<Role[]>([])
   const [selectedRole, setSelectedRole] = useState('all')
   const [selectedLocation, setSelectedLocation] = useState('all')
   const [selectedJobType, setSelectedJobType] = useState('all')
-  const [filteredJobs, setFilteredJobs] = useState(jobs)
+  const [jobs, setJobs] = useState<JobWithEmployer[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalJobs, setTotalJobs] = useState(0)
+  const perPage = 9
 
+  // Fetch roles
   useEffect(() => {
-    let result = [...jobs]
-    
-    if (selectedRole !== 'all') {
-      result = result.filter(job => job.roleId === selectedRole)
+    async function fetchRoles() {
+      try {
+        const response = await pb.collection('role').getList(1, 100);
+        const roleItems = response.items.map(item => ({
+          id: item.id,
+          name: item.name,
+          slug: item.slug,
+          status: item.status
+        })) as Role[];
+        
+        setRoles([
+          { id: 'all', name: 'All Roles', slug: 'all', status: true },
+          ...roleItems
+        ]);
+      } catch (err) {
+        console.error('Error fetching roles:', err)
+      }
     }
-    
-    if (selectedLocation !== 'all') {
-      result = result.filter(job => job.locationId === selectedLocation)
+
+    fetchRoles()
+  }, [])
+
+  // Fetch jobs from custom API with filters
+  useEffect(() => {
+    async function fetchJobs() {
+      try {
+        setIsLoading(true)
+        
+        // Build query params
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          per_page: perPage.toString()
+        })
+        
+        // Add filters if not 'all'
+        if (selectedRole !== 'all') {
+          const roleSlug = roles.find(r => r.id === selectedRole)?.slug
+          if (roleSlug) params.append('role', roleSlug)
+        }
+        
+        if (selectedLocation !== 'all') {
+          params.append('remote', selectedLocation === 'remote' ? 'true' : 'false')
+        }
+        
+        if (selectedJobType !== 'all') {
+          const typeName = jobTypes.find(t => t.id === selectedJobType)?.name
+          if (typeName) params.append('type', typeName)
+        }
+
+        const response = await pb.send(`/api/custom/jobs-with-employers?${params.toString()}`, {
+          method: 'GET'
+        });
+        const data = response as PaginatedResponse;
+        setJobs(data.items)
+        setTotalJobs(data.total_items)
+      } catch (err) {
+        console.error('Error fetching jobs:', err)
+      } finally {
+        setIsLoading(false)
+      }
     }
-    
-    if (selectedJobType !== 'all') {
-      result = result.filter(job => job.jobTypeId === selectedJobType)
-    }
-    
-    setFilteredJobs(result)
-  }, [selectedRole, selectedLocation, selectedJobType])
+
+    fetchJobs()
+  }, [currentPage, selectedRole, selectedLocation, selectedJobType, roles])
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage)
+    window.scrollTo(0, 0)
+  }
+
+  if (isLoading && roles.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+        <LoadingSpinner size="lg" text="Loading..." />
+      </div>
+    )
+  }
 
   return (
     <main className="min-h-screen bg-[#0A0A0A]">
@@ -284,15 +265,16 @@ export default function JobsPage() {
         </div>
 
         {/* Job listings in a grid layout - 3 per row */}
-        {filteredJobs.length === 0 ? (
+        {jobs.length === 0 ? (
           <div className="text-center py-12">
             <h3 className="text-xl font-medium text-white mb-2">No jobs found</h3>
             <p className="text-gray-400">Try adjusting your filters to find more opportunities</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {filteredJobs.map((job) => {
-              const JobIcon = job.icon;
+            {jobs.map((job) => {
+              const roleId = job.role?.toLowerCase().replace(/\s+/g, '-')
+              const JobIcon = roleIcons[roleId as keyof typeof roleIcons] || DocumentTextIcon;
               
               return (
                 <div key={job.id} className="rounded-xl bg-[#111] p-6 shadow-lg ring-1 ring-white/10 hover:bg-white/10 transition-colors duration-200 h-full flex flex-col">
@@ -300,20 +282,22 @@ export default function JobsPage() {
                     <div className="rounded-full bg-blue-500/10 p-3 flex-shrink-0">
                       <JobIcon className="h-5 w-5 text-blue-400" />
                     </div>
-                    <h2 className="text-lg font-semibold text-white truncate">{job.role}</h2>
+                    <h2 className="text-lg font-semibold text-white truncate">{job.title}</h2>
                   </div>
                   
-                  <div className="text-sm text-gray-400 mb-3">{job.company}</div>
+                  <div className="text-sm text-gray-400 mb-3">
+                    {job.company_name || 'Company Name'}
+                  </div>
                   
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 mb-4">
-                    <span>{job.location}</span>
+                    <span>{job.location || (job.is_remote ? 'Remote' : 'Onsite')}</span>
                     <span>•</span>
-                    <span>{job.jobType}</span>
+                    <span>{job.type}</span>
                   </div>
                   
                   <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/10">
                     <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-400/20">
-                      {job.salary}
+                      {formatSalary(job.salary)}
                     </span>
                     
                     <Link 
@@ -330,42 +314,38 @@ export default function JobsPage() {
         )}
         
         {/* Pagination */}
-        {filteredJobs.length > 0 && (
+        {jobs.length > 0 && (
           <div className="flex items-center justify-between border-t border-white/10 pt-6">
             <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-gray-400">
-                  Showing <span className="font-medium text-white">1</span> to <span className="font-medium text-white">{filteredJobs.length}</span> of{' '}
-                  <span className="font-medium text-white">{filteredJobs.length}</span> results
+                  Showing <span className="font-medium text-white">{(currentPage - 1) * perPage + 1}</span> to{' '}
+                  <span className="font-medium text-white">{Math.min(currentPage * perPage, totalJobs)}</span> of{' '}
+                  <span className="font-medium text-white">{totalJobs}</span> results
                 </p>
               </div>
               <div>
                 <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                  <a
-                    href="#"
-                    className="relative inline-flex items-center rounded-l-md px-3 py-2 text-gray-400 ring-1 ring-inset ring-white/10 hover:bg-white/5 focus:z-20 focus:outline-offset-0"
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center rounded-l-md px-3 py-2 text-gray-400 ring-1 ring-inset ring-white/10 hover:bg-white/5 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="sr-only">Previous</span>
                     <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                       <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
                     </svg>
-                  </a>
-                  <a
-                    href="#"
-                    aria-current="page"
-                    className="relative z-10 inline-flex items-center bg-blue-500/10 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-                  >
-                    1
-                  </a>
-                  <a
-                    href="#"
-                    className="relative inline-flex items-center rounded-r-md px-3 py-2 text-gray-400 ring-1 ring-inset ring-white/10 hover:bg-white/5 focus:z-20 focus:outline-offset-0"
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage * perPage >= totalJobs}
+                    className="relative inline-flex items-center rounded-r-md px-3 py-2 text-gray-400 ring-1 ring-inset ring-white/10 hover:bg-white/5 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="sr-only">Next</span>
                     <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                       <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
                     </svg>
-                  </a>
+                  </button>
                 </nav>
               </div>
             </div>
