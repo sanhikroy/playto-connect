@@ -11,15 +11,26 @@ import {
   TrashIcon,
   ArrowUpTrayIcon
 } from '@heroicons/react/24/outline'
-import Select, { MultiValue, SingleValue } from 'react-select'
+import dynamic from 'next/dynamic'
+import type { MultiValue, SingleValue } from 'react-select'
 import { skillOptions, experienceLevelOptions, processVideoUrl, getDefaultProfilePicture } from '@/lib/utils/talentProfile'
+import { pb, TalentProfileRecord } from '@/lib/pocketbase'
+
+// Create a client-side only version of Select
+const Select = dynamic(() => import('react-select'), {
+  ssr: false // This ensures the component only renders on the client
+})
 
 interface TalentProfile {
   title: string
   bio: string
   skills: string[]
   experience: string
-  portfolioVideos: string[]
+  portfolioVideos: Array<{
+    id: string
+    type: string
+    url: string
+  }>
   socialMediaUrl: string
   profilePicture: File | null
   profilePictureUrl: string
@@ -45,7 +56,11 @@ export default function EditTalentProfile() {
     bio: '',
     skills: [],
     experience: '',
-    portfolioVideos: [''],
+    portfolioVideos: [{
+      id: '',
+      type: 'youtube',
+      url: ''
+    }],
     socialMediaUrl: '',
     profilePicture: null,
     profilePictureUrl: ''
@@ -55,24 +70,33 @@ export default function EditTalentProfile() {
     const fetchProfile = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/talent/profile');
-        
-        if (!res.ok) {
-          throw new Error('Failed to fetch profile');
+        // Get the current authenticated user's profile
+        const authData = pb.authStore.model;
+        if (!authData) {
+          throw new Error('Not authenticated');
         }
-        
-        const data = await res.json();
+
+        const record = await pb.collection('talent_profiles').getFirstListItem<TalentProfileRecord>(
+          `user = "${authData.id}"`,
+          {
+            expand: 'user'
+          }
+        );
         
         // Transform the data to match our form structure
         const profileData = {
-          title: data.title || '',
-          bio: data.bio || '',
-          skills: Array.isArray(data.skills) ? data.skills : [],
-          experience: data.experience || '',
-          portfolioVideos: Array.isArray(data.portfolioVideos) ? data.portfolioVideos : [''],
-          socialMediaUrl: data.socialMediaUrl || '',
+          title: record.title || '',
+          bio: record.bio || '',
+          skills: Array.isArray(record.skills) ? record.skills : [],
+          experience: record.experience || '',
+          portfolioVideos: Array.isArray(record.portfolio_videos) ? record.portfolio_videos : [{
+            id: '',
+            type: 'youtube',
+            url: ''
+          }],
+          socialMediaUrl: record.social_media_url || '',
           profilePicture: null,
-          profilePictureUrl: data.profilePicture || ''
+          profilePictureUrl: record.expand?.user?.avatar || ''
         };
         
         setFormData(profileData);
@@ -110,20 +134,46 @@ export default function EditTalentProfile() {
 
   const handleVideoChange = (index: number, value: string) => {
     const updatedVideos = [...formData.portfolioVideos];
-    updatedVideos[index] = value;
+    const videoInfo = processVideoUrl(value);
+    
+    if (videoInfo) {
+      updatedVideos[index] = {
+        id: videoInfo.id,
+        type: videoInfo.type,
+        url: value
+      };
+    } else {
+      updatedVideos[index] = {
+        id: '',
+        type: 'youtube',
+        url: value
+      };
+    }
+    
     setFormData(prev => ({ ...prev, portfolioVideos: updatedVideos }));
   };
 
   const addVideoField = () => {
     setFormData(prev => ({
       ...prev,
-      portfolioVideos: [...prev.portfolioVideos, '']
+      portfolioVideos: [...prev.portfolioVideos, {
+        id: '',
+        type: 'youtube',
+        url: ''
+      }]
     }));
   };
 
   const removeVideoField = (index: number) => {
     const updatedVideos = formData.portfolioVideos.filter((_, i) => i !== index);
-    setFormData(prev => ({ ...prev, portfolioVideos: updatedVideos.length ? updatedVideos : [''] }));
+    setFormData(prev => ({ 
+      ...prev, 
+      portfolioVideos: updatedVideos.length ? updatedVideos : [{
+        id: '',
+        type: 'youtube',
+        url: ''
+      }] 
+    }));
   };
 
   const handleProfilePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,21 +216,18 @@ export default function EditTalentProfile() {
     setUploadingImage(true);
     
     try {
-      const formDataObj = new FormData();
-      formDataObj.append('file', formData.profilePicture);
-
-      const response = await fetch('/api/upload/profile-picture', {
-        method: 'POST',
-        body: formDataObj,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to upload profile picture');
+      const authData = pb.authStore.model;
+      if (!authData) {
+        throw new Error('Not authenticated');
       }
 
-      const data = await response.json();
-      return data.url;
+      // Create FormData for the file upload
+      const formDataObj = new FormData();
+      formDataObj.append('avatar', formData.profilePicture);
+
+      // Update the user's avatar
+      const updatedUser = await pb.collection('users').update(authData.id, formDataObj);
+      return updatedUser.avatar; // PocketBase returns the file URL
     } catch (error) {
       console.error('Error uploading profile picture:', error);
       setUploadError(error instanceof Error ? error.message : 'Failed to upload profile picture');
@@ -205,59 +252,53 @@ export default function EditTalentProfile() {
     
     // Validate video URLs
     const validVideos = formData.portfolioVideos
-      .filter(url => url.trim() !== '')
-      .filter(url => validateVideoUrl(url));
+      .filter(video => video.url.trim() !== '')
+      .filter(video => validateVideoUrl(video.url));
     
-    if (validVideos.length !== formData.portfolioVideos.filter(url => url.trim() !== '').length) {
+    if (validVideos.length !== formData.portfolioVideos.filter(video => video.url.trim() !== '').length) {
       setError('Please correct the invalid video URLs');
       setSaving(false);
       return;
     }
     
     try {
+      // Get the current authenticated user
+      const authData = pb.authStore.model;
+      if (!authData) {
+        throw new Error('Not authenticated');
+      }
+
       // Upload profile picture if changed
-      let profilePictureUrl = null;
       if (formData.profilePicture) {
         try {
-          profilePictureUrl = await uploadProfilePicture();
+          await uploadProfilePicture();
         } catch (error) {
           console.error('Error uploading profile picture:', error);
-          // Ask user if they want to continue without uploading the profile picture
           if (!window.confirm('Failed to upload profile picture. Do you want to continue updating your profile without the new picture?')) {
             setSaving(false);
             return;
           }
-          // Continue with profile update even if picture upload fails
         }
-      } else {
-        // Use existing URL if no new file
-        profilePictureUrl = formData.profilePictureUrl;
       }
       
-      // Prepare data for API
-      const profileData = {
+      // Get the current profile record
+      const record = await pb.collection('talent_profiles').getFirstListItem<TalentProfileRecord>(
+        `user = "${authData.id}"`
+      );
+      
+      // Prepare data for update
+      const updateData = {
         title: formData.title,
         bio: formData.bio,
         skills: formData.skills,
         experience: formData.experience,
-        portfolioVideos: validVideos,
-        socialMediaUrl: formData.socialMediaUrl,
-        ...(profilePictureUrl && { profilePicture: profilePictureUrl })
+        portfolio_videos: validVideos,
+        social_media_url: formData.socialMediaUrl,
+        is_complete: true // Mark as complete since all required fields are filled
       };
       
       // Update profile
-      const response = await fetch('/api/talent/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(profileData),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update profile');
-      }
+      await pb.collection('talent_profiles').update(record.id, updateData);
       
       setSuccess(true);
       
@@ -539,11 +580,11 @@ export default function EditTalentProfile() {
                 <div className="space-y-3">
                   {formData.portfolioVideos.map((video, index) => (
                     <div key={index} className="flex items-center gap-2">
-                <input
+                      <input
                         type="text"
-                        value={video}
+                        value={video.url}
                         onChange={(e) => handleVideoChange(index, e.target.value)}
-                  className="block w-full rounded-lg border-0 bg-white/5 px-4 py-3 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-blue-400/50 sm:text-sm"
+                        className="block w-full rounded-lg border-0 bg-white/5 px-4 py-3 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-blue-400/50 sm:text-sm"
                         placeholder="YouTube or Instagram video URL"
                       />
                       <button

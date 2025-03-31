@@ -10,6 +10,7 @@ import {
   EnvelopeIcon,
 } from '@heroicons/react/24/outline'
 import { processVideoUrl, formatExperienceLevel, getDefaultProfilePicture } from '@/lib/utils/talentProfile'
+import { pb, TalentProfileRecord } from '@/lib/pocketbase'
 
 // Add modal backdrop styling
 const Modal = ({ isOpen, onClose, children }: { isOpen: boolean, onClose: () => void, children: React.ReactNode }) => {
@@ -31,7 +32,7 @@ const Modal = ({ isOpen, onClose, children }: { isOpen: boolean, onClose: () => 
 };
 
 // Update interface and video helper functions
-interface TalentProfile {
+export interface TalentProfile {
   id: string
   userId: string
   name?: string
@@ -90,14 +91,43 @@ export default function ViewTalentProfile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch('/api/talent/profile');
-        
-        if (!res.ok) {
-          throw new Error('Failed to fetch profile');
+        // Get the current authenticated user's profile
+        const authData = pb.authStore.model;
+        if (!authData) {
+          throw new Error('Not authenticated');
         }
+
+        const record = await pb.collection('talent_profiles').getFirstListItem<TalentProfileRecord>(
+          `user = "${authData.id}"`,
+          {
+            expand: 'user'
+          }
+        );
         
-        const data = await res.json();
-        setProfile(data);
+        // Transform PocketBase record to our TalentProfile interface
+        const transformedProfile: TalentProfile = {
+          id: record.id,
+          userId: record.user,
+          name: record.expand?.user?.name || '',
+          title: record.title,
+          bio: record.bio,
+          skills: record.skills,
+          experience: record.experience,
+          socialMediaUrl: record.social_media_url || null,
+          email: record.expand?.user?.email,
+          isComplete: record.is_complete,
+          createdAt: record.created,
+          updatedAt: record.updated,
+          profilePicture: record.expand?.user?.avatar || undefined,
+          portfolioVideos: record.portfolio_videos?.map(video => ({
+            id: video.id,
+            url: video.url,
+            type: video.type,
+            title: `Portfolio Video` // We can enhance this later if needed
+          })) || []
+        };
+        
+        setProfile(transformedProfile);
       } catch (error) {
         console.error('Error fetching profile:', error);
       } finally {

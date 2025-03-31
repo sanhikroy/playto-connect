@@ -3,6 +3,9 @@ import PocketBase from 'pocketbase';
 // Initialize PocketBase client
 export const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
 
+// globally disable auto cancellation
+pb.autoCancellation(false);
+
 // Base record type from PocketBase
 export interface BaseRecord {
     id: string;
@@ -31,8 +34,15 @@ export interface TalentProfileRecord extends BaseRecord {
     experience: string;
     portfolio_url?: string;
     social_media_url?: string;
-    portfolio_videos?: string[];
+    portfolio_videos?: Array<{
+        id: string;
+        type: string;
+        url: string;
+    }>;
     is_complete: boolean;
+    expand?: {
+        user?: UserRecord;
+    };
 }
 
 export interface EmployerProfileRecord extends BaseRecord {

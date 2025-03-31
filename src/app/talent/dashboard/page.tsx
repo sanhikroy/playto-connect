@@ -12,14 +12,24 @@ import {
   ClockIcon, 
   XCircleIcon
 } from '@heroicons/react/24/outline'
+import { pb, TalentProfileRecord } from '@/lib/pocketbase'
 
 interface Application {
   id: string
-  jobId: string
-  jobTitle: string
-  companyName: string
+  job: string
+  expand?: {
+    job?: {
+      title: string
+      employer: string
+      expand?: {
+        employer?: {
+          company_name: string
+        }
+      }
+    }
+  }
   status: 'PENDING' | 'REVIEWING' | 'ACCEPTED' | 'REJECTED'
-  appliedAt: string
+  created: string
 }
 
 interface Profile {
@@ -37,41 +47,57 @@ export default function TalentDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch profile data
-        const profileRes = await fetch('/api/talent/profile');
-        
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          
-          // Calculate profile completion percentage
-          const requiredFields = ['title', 'bio', 'skills', 'experience'];
-          const completedFields = requiredFields.filter(field => 
-            profileData[field] && 
-            (typeof profileData[field] === 'string' ? 
-              profileData[field].trim() !== '' : 
-              Array.isArray(profileData[field]) ? 
-                profileData[field].length > 0 : 
-                true
-            )
-          );
-          
-          const completionPercentage = Math.round((completedFields.length / requiredFields.length) * 100);
-          
-        setProfile({
-            name: profileData.name || 'Talent',
-            title: profileData.title || 'Add your professional title',
-            completionPercentage,
-            profilePicture: profileData.profilePicture
-          });
+        // Get the current authenticated user
+        const authData = pb.authStore.model;
+        if (!authData) {
+          throw new Error('Not authenticated');
         }
+
+        // Fetch profile data
+        const profileRecord = await pb.collection('talent_profiles').getFirstListItem<TalentProfileRecord>(
+          `user = "${authData.id}"`,
+          {
+            expand: 'user'
+          }
+        );
+        
+        // Calculate profile completion percentage
+        const requiredFields = ['title', 'bio', 'skills', 'experience'];
+        const completedFields = requiredFields.filter(field => 
+          profileRecord[field as keyof TalentProfileRecord] && 
+          (typeof profileRecord[field as keyof TalentProfileRecord] === 'string' ? 
+            (profileRecord[field as keyof TalentProfileRecord] as string).trim() !== '' : 
+            Array.isArray(profileRecord[field as keyof TalentProfileRecord]) ? 
+              (profileRecord[field as keyof TalentProfileRecord] as string[]).length > 0 : 
+              true
+          )
+        );
+        
+        const completionPercentage = Math.round((completedFields.length / requiredFields.length) * 100);
+        
+        setProfile({
+          name: profileRecord.expand?.user?.name || 'Talent',
+          title: profileRecord.title || 'Add your professional title',
+          completionPercentage,
+          profilePicture: profileRecord.expand?.user?.avatar
+        });
         
         // Fetch applications data
-        const applicationsRes = await fetch('/api/talent/applications');
+        const applicationsRecords = await pb.collection('applications').getList(1, 5, {
+          filter: `talent = "${authData.id}"`,
+          expand: 'job,job.employer',
+          sort: '-created'
+        });
         
-        if (applicationsRes.ok) {
-          const applicationsData = await applicationsRes.json();
-          setApplications(applicationsData);
-        }
+        const transformedApplications = applicationsRecords.items.map(record => ({
+          id: record.id,
+          job: record.job,
+          status: record.status,
+          created: record.created,
+          expand: record.expand
+        }));
+
+        setApplications(transformedApplications);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -257,34 +283,34 @@ export default function TalentDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
-                    {applications.slice(0, 5).map((application) => (
+                    {applications.map((application) => (
                       <tr key={application.id} className="hover:bg-white/5">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                          {application.jobTitle}
+                          {application.expand?.job?.title || 'Unknown Job'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          {application.companyName}
+                          {application.expand?.job?.expand?.employer?.company_name || 'Unknown Company'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           {getStatusBadge(application.status)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          {formatDate(application.appliedAt)}
+                          {formatDate(application.created)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                <Link
+                          <Link
                             href={`/talent/applications/${application.id}`}
                             className="text-blue-400 hover:text-blue-300"
-                >
+                          >
                             View
-                </Link>
+                          </Link>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-          </div>
+            </div>
           )}
         </div>
       </div>

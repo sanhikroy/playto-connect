@@ -2,26 +2,33 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { pb } from '@/lib/pocketbase'
 
 export default function CompleteTalentProfile() {
   const router = useRouter()
-  const { data: session, update } = useSession()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const [formData, setFormData] = useState({
     title: '',
     bio: '',
-    skills: '',
+    skills: [] as string[],
     experience: '',
-    portfolio: '',
-    social: '',
+    portfolio_url: '',
+    social_media_url: '',
   })
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    if (name === 'skills') {
+      // Split skills by comma and trim whitespace
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: value.split(',').map(skill => skill.trim()).filter(Boolean)
+      }))
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,27 +37,46 @@ export default function CompleteTalentProfile() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/talent/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Something went wrong')
+      // Get the current authenticated user
+      const authData = pb.authStore.model;
+      if (!authData) {
+        throw new Error('Not authenticated');
       }
 
-      // Update the session to reflect the new profile data
-      await update()
+      // Check if profile already exists
+      let record;
+      try {
+        record = await pb.collection('talent_profiles').getFirstListItem(
+          `user = "${authData.id}"`
+        );
+      } catch {
+        // Profile doesn't exist yet, continue with creation
+      }
+
+      const profileData = {
+        user: authData.id,
+        title: formData.title,
+        bio: formData.bio,
+        skills: formData.skills,
+        experience: formData.experience,
+        portfolio_url: formData.portfolio_url || null,
+        social_media_url: formData.social_media_url || null,
+        is_complete: true
+      };
+
+      if (record) {
+        // Update existing profile
+        await pb.collection('talent_profiles').update(record.id, profileData);
+      } else {
+        // Create new profile
+        await pb.collection('talent_profiles').create(profileData);
+      }
 
       // Redirect to the talent dashboard
       router.push('/talent/dashboard')
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      console.error('Error saving profile:', error);
+      setError(error instanceof Error ? error.message : 'An error occurred while saving your profile')
     } finally {
       setLoading(false)
     }
@@ -133,12 +159,13 @@ export default function CompleteTalentProfile() {
                   type="text"
                   id="skills"
                   name="skills"
-                  value={formData.skills}
+                  value={formData.skills.join(', ')}
                   onChange={handleChange}
                   required
                   className="block w-full rounded-lg border-0 bg-white/5 px-4 py-3 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-white/20 sm:text-sm sm:leading-6"
                   placeholder="e.g., Adobe Premiere Pro, After Effects, DaVinci Resolve"
                 />
+                <p className="mt-1 text-sm text-gray-400">Separate skills with commas</p>
               </div>
             </div>
 
@@ -148,30 +175,34 @@ export default function CompleteTalentProfile() {
                 Experience <span className="text-red-500">*</span>
               </label>
               <div className="mt-2">
-                <textarea
+                <select
                   id="experience"
                   name="experience"
-                  rows={4}
                   value={formData.experience}
                   onChange={handleChange}
                   required
                   className="block w-full rounded-lg border-0 bg-white/5 px-4 py-3 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-white/20 sm:text-sm sm:leading-6"
-                  placeholder="Describe your relevant work experience..."
-                />
+                >
+                  <option value="">Select your experience level</option>
+                  <option value="entry">Entry Level (0-1 years)</option>
+                  <option value="1_to_3">Mid Level (1-3 years)</option>
+                  <option value="3_to_5">Senior Level (3-5 years)</option>
+                  <option value="5_plus">Expert Level (5+ years)</option>
+                </select>
               </div>
             </div>
 
             {/* Portfolio URL */}
             <div>
-              <label htmlFor="portfolio" className="block text-sm font-medium leading-6 text-white">
+              <label htmlFor="portfolio_url" className="block text-sm font-medium leading-6 text-white">
                 Portfolio URL
               </label>
               <div className="mt-2">
                 <input
                   type="url"
-                  id="portfolio"
-                  name="portfolio"
-                  value={formData.portfolio}
+                  id="portfolio_url"
+                  name="portfolio_url"
+                  value={formData.portfolio_url}
                   onChange={handleChange}
                   className="block w-full rounded-lg border-0 bg-white/5 px-4 py-3 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-white/20 sm:text-sm sm:leading-6"
                   placeholder="https://your-portfolio.com"
@@ -181,15 +212,15 @@ export default function CompleteTalentProfile() {
 
             {/* Social Media URL */}
             <div>
-              <label htmlFor="social" className="block text-sm font-medium leading-6 text-white">
+              <label htmlFor="social_media_url" className="block text-sm font-medium leading-6 text-white">
                 Social Media URL
               </label>
               <div className="mt-2">
                 <input
                   type="url"
-                  id="social"
-                  name="social"
-                  value={formData.social}
+                  id="social_media_url"
+                  name="social_media_url"
+                  value={formData.social_media_url}
                   onChange={handleChange}
                   className="block w-full rounded-lg border-0 bg-white/5 px-4 py-3 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-white/20 sm:text-sm sm:leading-6"
                   placeholder="https://youtube.com/@yourchannel"
