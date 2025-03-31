@@ -91,6 +91,14 @@ const formatSalary = (salaryStr: string | undefined | null) => {
   return salaryStr
 }
 
+// Helper function to format job type display name
+const formatJobType = (type: string) => {
+  // Convert 'full-time' to 'Full-time', 'part-time' to 'Part-time', etc.
+  return type.split('-').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join('-')
+}
+
 export default function JobsPage() {
   const [roles, setRoles] = useState<Role[]>([])
   const [selectedRole, setSelectedRole] = useState('all')
@@ -131,45 +139,51 @@ export default function JobsPage() {
     async function fetchJobs() {
       setIsLoading(true)
       try {
-        const filter = []
+        const params = new URLSearchParams()
+        params.append('page', currentPage.toString())
+        params.append('per_page', perPage.toString())
         
         if (selectedRole !== 'all') {
-          const roleName = roles.find(r => r.id === selectedRole)?.name
-          if (roleName) filter.push(`role = "${roleName}"`)
+          const roleSlug = roles.find(r => r.id === selectedRole)?.slug
+          if (roleSlug) params.append('role', roleSlug)
         }
         
         if (selectedLocation !== 'all') {
-          filter.push(`is_remote = ${selectedLocation === 'remote'}`)
+          params.append('remote', (selectedLocation === 'remote').toString())
         }
         
         if (selectedJobType !== 'all') {
-          const typeName = jobTypes.find(t => t.id === selectedJobType)?.name
-          if (typeName) filter.push(`type = "${typeName}"`)
+          const jobTypeName = jobTypes.find(t => t.id === selectedJobType)?.name
+          if (jobTypeName) params.append('type', jobTypeName)
         }
-
-        const filterStr = filter.length > 0 ? filter.join(' && ') : ''
         
-        const resultList = await pb.collection('jobs').getList(currentPage, perPage, {
-          filter: filterStr,
-          expand: 'employer_id',
-          sort: '-created'
+        // Use direct fetch instead of PocketBase to avoid any transformations
+        const response = await fetch(`${pb.baseUrl}/api/custom/jobs-with-employers?${params.toString()}`, {
+          headers: {
+            'Accept': 'application/json',
+          },
         });
-
-        // Transform the response to match our expected format
-        const transformedJobs = resultList.items.map(job => ({
-          ...job,
-          company_name: job.expand?.employer_id?.company_name || '',
-          company_description: job.expand?.employer_id?.company_description || '',
-          industry: job.expand?.employer_id?.industry || '',
-          website: job.expand?.employer_id?.website || '',
-          employer_location: job.expand?.employer_id?.location || '',
-          size: job.expand?.employer_id?.size || ''
-        })) as JobWithEmployer[];
-
-        setJobs(transformedJobs)
-        setTotalJobs(resultList.totalItems)
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        // The API returns the correct structure directly
+        if (result && result.items && Array.isArray(result.items)) {
+          // Ensure we only show exactly 9 items per page, even if API returns more
+          const limitedItems = result.items.slice(0, perPage)
+          setJobs(limitedItems)
+          setTotalJobs(result.total_items)
+        } else {
+          setJobs([])
+          setTotalJobs(0)
+        }
       } catch (err) {
         console.error('Error fetching jobs:', err)
+        setJobs([])
+        setTotalJobs(0)
       } finally {
         setIsLoading(false)
       }
@@ -307,7 +321,7 @@ export default function JobsPage() {
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 mb-4">
                     <span>{job.location || (job.is_remote ? 'Remote' : 'Onsite')}</span>
                     <span>•</span>
-                    <span>{job.type}</span>
+                    <span>{formatJobType(job.type)}</span>
                   </div>
                   
                   <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/10">

@@ -87,6 +87,7 @@ export default function JobDetail() {
   const [job, setJob] = useState<JobWithEmployer | null>(null)
   const [loading, setLoading] = useState(true)
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false)
+  const [hasApplied, setHasApplied] = useState(false)
   const [formData, setFormData] = useState({
     whyInterested: '',
     referenceVideo: '',
@@ -108,6 +109,14 @@ export default function JobDetail() {
           expand: 'employer_id',
           requestKey: `getJob_${id}`
         });
+
+        // Check if user has already applied
+        if (isAuthenticated && user?.id) {
+          const applications = await pb.collection('applications').getList(1, 1, {
+            filter: `job = "${id}" && talent = "${user.id}"`,
+          });
+          setHasApplied(applications.totalItems > 0);
+        }
 
         // Transform the response to match our expected format
         const transformedJob: JobWithEmployer = {
@@ -255,6 +264,8 @@ export default function JobDetail() {
       setTimeout(() => {
         setIsApplyModalOpen(false)
         setSubmitSuccess(false)
+        // Redirect to dashboard after success message
+        router.push('/talent/dashboard')
       }, 2000)
       
     } catch (error) {
@@ -436,13 +447,22 @@ export default function JobDetail() {
 
         {/* Apply Button */}
         <div className="flex justify-center my-12">
-          <button
-            type="button"
-            className="rounded-full bg-white px-10 py-4 text-base font-medium text-black hover:bg-gray-100"
-            onClick={() => setIsApplyModalOpen(true)}
-          >
-            Apply for this Position
-          </button>
+          {hasApplied ? (
+            <Link
+              href="/talent/dashboard"
+              className="inline-flex justify-center rounded-full bg-white/10 px-10 py-4 text-base font-medium text-white hover:bg-white/20 transition-colors"
+            >
+              View Application Status
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className="rounded-full bg-white px-10 py-4 text-base font-medium text-black hover:bg-gray-100"
+              onClick={() => setIsApplyModalOpen(true)}
+            >
+              Apply for this Position
+            </button>
+          )}
         </div>
       </div>
 

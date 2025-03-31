@@ -16,18 +16,10 @@ import { pb, TalentProfileRecord } from '@/lib/pocketbase'
 
 interface Application {
   id: string
-  job: string
-  expand?: {
-    job?: {
-      title: string
-      employer: string
-      expand?: {
-        employer?: {
-          company_name: string
-        }
-      }
-    }
-  }
+  job_id: string
+  job_title: string
+  job_type: string
+  company_name: string
   status: 'PENDING' | 'REVIEWING' | 'ACCEPTED' | 'REJECTED'
   created: string
 }
@@ -82,22 +74,14 @@ export default function TalentDashboard() {
           profilePicture: profileRecord.expand?.user?.avatar
         });
         
-        // Fetch applications data
-        const applicationsRecords = await pb.collection('applications').getList(1, 5, {
-          filter: `talent = "${authData.id}"`,
-          expand: 'job,job.employer',
-          sort: '-created'
-        });
-        
-        const transformedApplications = applicationsRecords.items.map(record => ({
-          id: record.id,
-          job: record.job,
-          status: record.status,
-          created: record.created,
-          expand: record.expand
-        }));
+        // Fetch applications using the custom API
+        const response = await fetch(`${pb.baseUrl}/api/custom/applications-with-details?user_id=${authData.id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch applications');
+        }
+        const data = await response.json();
+        setApplications(data.items);
 
-        setApplications(transformedApplications);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -225,7 +209,7 @@ export default function TalentDashboard() {
               </Link>
               
               <Link
-                href="/talent/jobs"
+                href="/jobs"
                 className="inline-flex items-center rounded-lg bg-white/5 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/10 transition-all duration-200"
               >
                 <BriefcaseIcon className="h-4 w-4 mr-1" />
@@ -286,10 +270,10 @@ export default function TalentDashboard() {
                     {applications.map((application) => (
                       <tr key={application.id} className="hover:bg-white/5">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                          {application.expand?.job?.title || 'Unknown Job'}
+                          {application.job_title || 'Unknown Job'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          {application.expand?.job?.expand?.employer?.company_name || 'Unknown Company'}
+                          {application.company_name || 'Unknown Company'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           {getStatusBadge(application.status)}
