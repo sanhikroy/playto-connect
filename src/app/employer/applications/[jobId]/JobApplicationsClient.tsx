@@ -12,8 +12,6 @@ import {
   PencilSquareIcon,
   UserCircleIcon
 } from '@heroicons/react/24/outline'
-import { Menu, Transition } from '@headlessui/react'
-import { Fragment } from 'react'
 import { pb, JobRecord, ApplicationRecord, UserRecord } from '@/lib/pocketbase'
 import { format } from 'date-fns'
 
@@ -171,6 +169,26 @@ export default function JobApplicationsClient({ jobId }: JobApplicationsClientPr
   const [selectedApplication, setSelectedApplication] = useState<ApplicationWithUser | null>(null)
   const [filterStatus, setFilterStatus] = useState<ApplicationStatus | 'all'>('all')
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  
+  // Add a useEffect to handle click outside of dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const dropdowns = document.querySelectorAll('.status-dropdown-content');
+      dropdowns.forEach(dropdown => {
+        if (!dropdown.classList.contains('hidden')) {
+          const target = event.target as Node;
+          if (dropdown.parentNode && !dropdown.parentNode.contains(target)) {
+            dropdown.classList.add('hidden');
+          }
+        }
+      });
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   
   const fetchApplications = async () => {
     try {
@@ -340,71 +358,108 @@ export default function JobApplicationsClient({ jobId }: JobApplicationsClientPr
                       </button>
                       
                       {/* Status dropdown */}
-                      <Menu as="div" className="relative inline-block text-left">
-                        <div>
-                          <Menu.Button className="inline-flex justify-center w-full px-2 py-2 text-sm font-medium text-gray-400 rounded-md hover:bg-gray-800 focus:outline-none">
-                            <ChevronDownIcon className="w-5 h-5" aria-hidden="true" />
-                          </Menu.Button>
-                        </div>
-                        <Transition
-                          as={Fragment}
-                          enter="transition ease-out duration-100"
-                          enterFrom="transform opacity-0 scale-95"
-                          enterTo="transform opacity-100 scale-100"
-                          leave="transition ease-in duration-75"
-                          leaveFrom="transform opacity-100 scale-100"
-                          leaveTo="transform opacity-0 scale-95"
+                      <div className="relative inline-block text-left" style={{ position: 'static' }}>
+                        <button
+                          onClick={(e) => {
+                            // Toggle current dropdown
+                            const dropdown = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (dropdown) {
+                              // Close all other dropdowns first
+                              document.querySelectorAll('.status-dropdown-content').forEach(el => {
+                                if (el !== dropdown) el.classList.add('hidden');
+                              });
+                              
+                              // Toggle this dropdown
+                              const isHidden = dropdown.classList.toggle('hidden');
+                              
+                              // Position dropdown if now visible
+                              if (!isHidden) {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                dropdown.style.top = `${rect.bottom + 5}px`;
+                                // Position right edge of dropdown at right edge of button
+                                dropdown.style.right = `${window.innerWidth - rect.right}px`;
+                                // Remove left positioning
+                                dropdown.style.left = '';
+                              }
+                            }
+                          }}
+                          className="inline-flex justify-center px-2 py-2 text-sm font-medium text-gray-400 rounded-md hover:bg-gray-800 focus:outline-none"
                         >
-                          <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-[#0A0A0A] shadow-lg ring-1 ring-white ring-opacity-5 focus:outline-none">
-                            <div className="py-1">
-                              <Menu.Item>
-                                {({ active }) => (
-                                  <button
-                                    onClick={() => handleStatusChange(application.id, 'PENDING')}
-                                    className={`${active ? 'bg-gray-800 text-white' : 'text-gray-300'} flex w-full items-center px-4 py-2 text-sm`}
-                                  >
-                                    <ClockIcon className="mr-2 h-4 w-4" />
-                                    Mark as Pending
-                                  </button>
-                                )}
-                              </Menu.Item>
-                              <Menu.Item>
-                                {({ active }) => (
-                                  <button
-                                    onClick={() => handleStatusChange(application.id, 'REVIEWING')}
-                                    className={`${active ? 'bg-gray-800 text-white' : 'text-gray-300'} flex w-full items-center px-4 py-2 text-sm`}
-                                  >
-                                    <PencilSquareIcon className="mr-2 h-4 w-4" />
-                                    Mark as Reviewing
-                                  </button>
-                                )}
-                              </Menu.Item>
-                              <Menu.Item>
-                                {({ active }) => (
-                                  <button
-                                    onClick={() => handleStatusChange(application.id, 'ACCEPTED')}
-                                    className={`${active ? 'bg-gray-800 text-white' : 'text-gray-300'} flex w-full items-center px-4 py-2 text-sm`}
-                                  >
-                                    <CheckCircleIcon className="mr-2 h-4 w-4" />
-                                    Accept Application
-                                  </button>
-                                )}
-                              </Menu.Item>
-                              <Menu.Item>
-                                {({ active }) => (
-                                  <button
-                                    onClick={() => handleStatusChange(application.id, 'REJECTED')}
-                                    className={`${active ? 'bg-gray-800 text-white' : 'text-gray-300'} flex w-full items-center px-4 py-2 text-sm`}
-                                  >
-                                    <XCircleIcon className="mr-2 h-4 w-4" />
-                                    Reject Application
-                                  </button>
-                                )}
-                              </Menu.Item>
-                            </div>
-                          </Menu.Items>
-                        </Transition>
-                      </Menu>
+                          <ChevronDownIcon className="w-5 h-5" aria-hidden="true" />
+                        </button>
+                        
+                        <div className="status-dropdown-content hidden fixed mt-1 w-48 bg-[#0A0A0A] border border-gray-800 rounded-md shadow-lg" style={{ zIndex: 9999, maxHeight: '12rem', overflow: 'auto' }}>
+                          <div className="py-1">
+                            <button
+                              onClick={() => {
+                                handleStatusChange(application.id, 'PENDING');
+                                const activeElement = document.activeElement;
+                                if (activeElement instanceof HTMLElement) {
+                                  activeElement.blur();
+                                }
+                                document.querySelectorAll('.status-dropdown-content').forEach(el => {
+                                  el.classList.add('hidden');
+                                });
+                              }}
+                              className="text-gray-300 flex w-full items-center px-4 py-2 text-sm hover:bg-gray-800 hover:text-white"
+                            >
+                              <ClockIcon className="mr-2 h-4 w-4 text-yellow-400" aria-hidden="true" />
+                              Mark as Pending
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                handleStatusChange(application.id, 'REVIEWING');
+                                const activeElement = document.activeElement;
+                                if (activeElement instanceof HTMLElement) {
+                                  activeElement.blur();
+                                }
+                                document.querySelectorAll('.status-dropdown-content').forEach(el => {
+                                  el.classList.add('hidden');
+                                });
+                              }}
+                              className="text-gray-300 flex w-full items-center px-4 py-2 text-sm hover:bg-gray-800 hover:text-white"
+                            >
+                              <PencilSquareIcon className="mr-2 h-4 w-4 text-blue-400" aria-hidden="true" />
+                              Mark as Reviewing
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                handleStatusChange(application.id, 'ACCEPTED');
+                                const activeElement = document.activeElement;
+                                if (activeElement instanceof HTMLElement) {
+                                  activeElement.blur();
+                                }
+                                document.querySelectorAll('.status-dropdown-content').forEach(el => {
+                                  el.classList.add('hidden');
+                                });
+                              }}
+                              className="text-gray-300 flex w-full items-center px-4 py-2 text-sm hover:bg-gray-800 hover:text-white"
+                            >
+                              <CheckCircleIcon className="mr-2 h-4 w-4 text-green-400" aria-hidden="true" />
+                              Accept Application
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                handleStatusChange(application.id, 'REJECTED');
+                                const activeElement = document.activeElement;
+                                if (activeElement instanceof HTMLElement) {
+                                  activeElement.blur();
+                                }
+                                document.querySelectorAll('.status-dropdown-content').forEach(el => {
+                                  el.classList.add('hidden');
+                                });
+                              }}
+                              className="text-gray-300 flex w-full items-center px-4 py-2 text-sm hover:bg-gray-800 hover:text-white"
+                            >
+                              <XCircleIcon className="mr-2 h-4 w-4 text-red-400" aria-hidden="true" />
+                              Reject Application
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
