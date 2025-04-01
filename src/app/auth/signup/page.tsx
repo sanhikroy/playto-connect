@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
+import { useAuth } from '@/components/providers/AuthProvider'
+import { pb } from '@/lib/pocketbase'
 
 export default function SignUp() {
   const router = useRouter()
@@ -14,6 +16,7 @@ export default function SignUp() {
   const [role, setRole] = useState<'TALENT' | 'EMPLOYER'>('TALENT')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const { loginWithGoogle } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -81,6 +84,30 @@ export default function SignUp() {
       setLoading(false)
     }
   }
+
+  const handleGoogleSignUp = async () => {
+    try {
+      await loginWithGoogle()
+      
+      // After successful authentication, check user role to determine redirect
+      const userData = pb.authStore.model;
+      
+      // Redirect based on role
+      if (userData?.role === 'TALENT') {
+        router.push('/talent/complete-profile')
+      } else if (userData?.role === 'EMPLOYER') {
+        router.push('/employer/complete-profile')
+      } else {
+        // Default to talent profile if role is not yet set
+        router.push('/talent/complete-profile')
+      }
+      
+      router.refresh()
+    } catch (error) {
+      console.error('Google sign up failed:', error)
+      setError('Google sign up failed. Please try again.')
+    }
+  }
   
   return (
     <main className="min-h-screen bg-[#0A0A0A]">
@@ -98,6 +125,28 @@ export default function SignUp() {
                 {error}
               </div>
             )}
+
+            <button
+              onClick={handleGoogleSignUp}
+              className="mb-6 flex w-full items-center justify-center gap-3 rounded-md bg-white/5 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 186.69 190.5">
+                <path fill="#4285f4" d="M95.25 77.932v36.888h51.262c-2.251 11.863-9.006 21.908-19.137 28.662l30.913 23.986c18.011-16.625 28.402-41.044 28.402-70.052 0-6.754-.606-13.249-1.732-19.483z" />
+                <path fill="#34a853" d="M41.87 113.047l-6.849 5.302-24.258 18.684c15.577 30.883 47.762 52.118 85.219 52.118 25.716 0 47.278-8.486 63.038-23.033l-30.913-23.986c-8.486 5.715-19.31 9.179-32.125 9.179-24.765 0-45.806-16.712-53.34-39.226z" />
+                <path fill="#fbbc05" d="M41.87 76.603c-3.24 9.599-5.054 19.815-5.054 30.446 0 10.631 1.814 20.847 5.054 30.446l31.107-23.986c-1.05-3.452-1.651-7.11-1.651-10.908 0-3.798.601-7.457 1.65-10.908z" />
+                <path fill="#ea4335" d="M95.25 47.927c16.625 0 28.689 7.19 35.328 13.183L155.95 35.42C139.203 19.477 118.988 10.5 95.25 10.5c-37.456 0-69.642 21.235-85.219 52.118l31.107 23.986c7.533-22.514 28.574-39.226 53.34-39.226z" />
+              </svg>
+              Continue with Google
+            </button>
+
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-[#111] px-2 text-gray-400">or</span>
+              </div>
+            </div>
             
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div>

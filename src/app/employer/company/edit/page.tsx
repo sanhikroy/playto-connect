@@ -1,24 +1,78 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeftIcon, BuildingOffice2Icon } from '@heroicons/react/24/outline'
+import { pb, EmployerProfileRecord } from '@/lib/pocketbase'
+import { Country, State, City } from 'country-state-city'
+
+interface ProfileData {
+  company_name: string;
+  industry: string;
+  location: string;
+  website: string;
+  company_description: string;
+  size: string;
+  is_complete: boolean;
+  logo?: string;
+}
 
 export default function EmployerProfileEdit() {
   const [formData, setFormData] = useState({
-    companyName: 'Acme Productions',
-    industry: 'Media Production',
-    country: 'United States',
-    state: 'California',
-    city: 'Los Angeles',
-    website: 'https://acmeproductions.com',
-    socialMediaUrl: 'https://instagram.com/acmeproductions',
-    description: 'Acme Productions is a leading media production company specializing in creating high-quality content for digital platforms.',
-    employeeCount: '10-50',
+    companyName: '',
+    industry: '',
+    country: '',
+    state: '',
+    city: '',
+    website: '',
+    socialMediaUrl: '',
+    description: '',
+    employeeCount: '',
     logoFile: null as File | null
   })
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const authData = pb.authStore.model;
+        if (!authData) {
+          throw new Error('Not authenticated');
+        }
+
+        const profile = await pb.collection('employer_profiles').getFirstListItem<EmployerProfileRecord>(
+          `user = "${authData.id}"`,
+          {
+            expand: 'user'
+          }
+        );
+
+        // Parse location string
+        const [city, state, country] = profile.location?.split(', ').map(part => part.trim()) || ['', '', ''];
+
+        // Update form data with existing profile
+        setFormData(prev => ({
+          ...prev,
+          companyName: profile.company_name || '',
+          industry: profile.industry || '',
+          country: country || '',
+          state: state || '',
+          city: city || '',
+          website: profile.website || '',
+          description: profile.company_description || '',
+          employeeCount: profile.size || ''
+        }));
+
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load profile');
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -33,36 +87,78 @@ export default function EmployerProfileEdit() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    setLoading(false)
-    setSuccess(true)
-    
-    // Reset success message after 3 seconds
-    setTimeout(() => setSuccess(false), 3000)
+    try {
+      const authData = pb.authStore.model;
+      if (!authData) {
+        throw new Error('Not authenticated');
+      }
+
+      // Get existing profile
+      const existingProfile = await pb.collection('employer_profiles').getFirstListItem<EmployerProfileRecord>(
+        `user = "${authData.id}"`,
+        {
+          expand: 'user'
+        }
+      );
+
+      // Prepare data for update
+      const data: ProfileData = {
+        company_name: formData.companyName,
+        industry: formData.industry,
+        location: `${formData.city}, ${formData.state}, ${formData.country}`,
+        website: formData.website,
+        company_description: formData.description,
+        size: formData.employeeCount,
+        is_complete: true
+      };
+
+      // Handle logo upload if a new file is selected
+      if (formData.logoFile) {
+        const formDataWithFile = new FormData();
+        formDataWithFile.append('logo', formData.logoFile);
+        const fileRecord = await pb.collection('files').create(formDataWithFile);
+        data.logo = fileRecord.id;
+      }
+
+      // Update profile
+      await pb.collection('employer_profiles').update(existingProfile.id, data);
+      
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update profile');
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // Common country options
-  const countryOptions = [
-    'United States', 'Canada', 'United Kingdom', 'Australia', 
-    'Germany', 'France', 'India', 'Japan', 'China', 'Brazil', 'Other'
-  ]
+  // Get all countries
+  const countries = Country.getAllCountries()
+  const countryOptions = countries.map(country => ({
+    value: country.isoCode,
+    label: country.name
+  }))
 
-  // State options (US-focused for demo, would be dynamic based on country in a real app)
-  const stateOptions = [
-    'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 
-    'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 
-    'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 
-    'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 
-    'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 
-    'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 
-    'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 
-    'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 
-    'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 
-    'West Virginia', 'Wisconsin', 'Wyoming'
-  ]
+  // Get states for selected country
+  const getStateOptions = (countryCode: string) => {
+    const states = State.getStatesOfCountry(countryCode)
+    return states.map(state => ({
+      value: state.isoCode,
+      label: state.name
+    }))
+  }
+
+  // Get cities for selected state
+  const getCityOptions = (countryCode: string, stateCode: string) => {
+    const cities = City.getCitiesOfState(countryCode, stateCode)
+    return cities.map(city => ({
+      value: city.name,
+      label: city.name
+    }))
+  }
 
   return (
     <main className="min-h-screen bg-[#0A0A0A]">
@@ -82,6 +178,12 @@ export default function EmployerProfileEdit() {
         {success && (
           <div className="mb-6 bg-green-500/10 text-green-400 p-4 rounded-lg">
             Profile updated successfully!
+          </div>
+        )}
+        
+        {error && (
+          <div className="mb-6 bg-red-500/10 text-red-400 p-4 rounded-lg">
+            {error}
           </div>
         )}
         
@@ -171,8 +273,11 @@ export default function EmployerProfileEdit() {
                       className="block w-full rounded-lg border-0 bg-black/70 px-4 py-3 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-blue-400/50 sm:text-sm appearance-none pr-8"
                       style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
                     >
-                      {countryOptions.map(country => (
-                        <option key={country} value={country} className="bg-black text-white">{country}</option>
+                      <option value="" className="bg-black text-white">Select a country</option>
+                      {countryOptions.map(option => (
+                        <option key={option.value} value={option.value} className="bg-black text-white">
+                          {option.label}
+                        </option>
                       ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
@@ -195,11 +300,15 @@ export default function EmployerProfileEdit() {
                       value={formData.state}
                       onChange={handleInputChange}
                       required
-                      className="block w-full rounded-lg border-0 bg-black/70 px-4 py-3 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-blue-400/50 sm:text-sm appearance-none pr-8"
+                      disabled={!formData.country}
+                      className="block w-full rounded-lg border-0 bg-black/70 px-4 py-3 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-blue-400/50 sm:text-sm appearance-none pr-8 disabled:opacity-50"
                       style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
                     >
-                      {stateOptions.map(state => (
-                        <option key={state} value={state} className="bg-black text-white">{state}</option>
+                      <option value="" className="bg-black text-white">Select a state</option>
+                      {formData.country && getStateOptions(formData.country).map(option => (
+                        <option key={option.value} value={option.value} className="bg-black text-white">
+                          {option.label}
+                        </option>
                       ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
@@ -215,15 +324,30 @@ export default function EmployerProfileEdit() {
                   <label htmlFor="city" className="block text-sm font-medium text-gray-400 mb-1">
                     City <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    type="text"
-                    id="city"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    required
-                    className="block w-full rounded-lg border-0 bg-white/5 px-4 py-3 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-blue-400/50 sm:text-sm"
-                  />
+                  <div className="relative">
+                    <select
+                      id="city"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      required
+                      disabled={!formData.state}
+                      className="block w-full rounded-lg border-0 bg-black/70 px-4 py-3 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-blue-400/50 sm:text-sm appearance-none pr-8 disabled:opacity-50"
+                      style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                    >
+                      <option value="" className="bg-black text-white">Select a city</option>
+                      {formData.country && formData.state && getCityOptions(formData.country, formData.state).map(option => (
+                        <option key={option.value} value={option.value} className="bg-black text-white">
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                      <svg className="h-4 w-4 fill-current text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </div>
               

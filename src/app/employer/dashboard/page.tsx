@@ -13,6 +13,7 @@ import {
   PlusIcon,
   BuildingOffice2Icon
 } from '@heroicons/react/24/outline'
+import { pb, JobRecord, ApplicationRecord, EmployerProfileRecord } from '@/lib/pocketbase'
 
 interface Job {
   id: string
@@ -21,7 +22,7 @@ interface Job {
   type: string
   postedDate: string
   applicationsCount: number
-  status: 'active' | 'draft' | 'closed'
+  status: 'Active' | 'Draft' | 'Closed'
 }
 
 interface ApplicationSummary {
@@ -34,71 +35,79 @@ interface ApplicationSummary {
 export default function EmployerDashboard() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [applicationStats, setApplicationStats] = useState<ApplicationSummary | null>(null)
+  const [companyProfile, setCompanyProfile] = useState<EmployerProfileRecord | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // In a real app, this would fetch from an API
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 800))
-        
-        // Mock jobs data
-        setJobs([
+        // Get the current authenticated user
+        const authData = pb.authStore.model;
+        if (!authData) {
+          throw new Error('Not authenticated');
+        }
+
+        // Fetch employer profile
+        const profileRecord = await pb.collection('employer_profiles').getFirstListItem<EmployerProfileRecord>(
+          `user = "${authData.id}"`,
           {
-            id: '1',
-            title: 'Senior Video Editor',
-            location: 'Remote',
-            type: 'Full-time',
-            postedDate: '2023-06-15',
-            applicationsCount: 12,
-            status: 'active'
-          },
-          {
-            id: '2',
-            title: 'Content Creator',
-            location: 'Los Angeles, CA',
-            type: 'Contract',
-            postedDate: '2023-06-05',
-            applicationsCount: 8,
-            status: 'active'
-          },
-          {
-            id: '3',
-            title: 'Motion Graphics Designer',
-            location: 'Remote',
-            type: 'Full-time',
-            postedDate: '2023-05-20',
-            applicationsCount: 15,
-            status: 'closed'
-          },
-          {
-            id: '4',
-            title: 'Social Media Editor',
-            location: 'New York, NY',
-            type: 'Part-time',
-            postedDate: '2023-06-18',
-            applicationsCount: 0,
-            status: 'draft'
+            expand: 'user'
           }
-        ])
-        
-        // Mock application stats
-        setApplicationStats({
-          totalApplications: 35,
-          newApplications: 8,
-          inReview: 15,
-          accepted: 7
-        })
+        );
+        setCompanyProfile(profileRecord);
+
+        // Fetch jobs for this employer
+        const jobsList = await pb.collection('jobs').getList<JobRecord>(1, 50, {
+          filter: `employer = "${authData.id}"`,
+          sort: '-created',
+          expand: 'employer'
+        });
+
+        // Transform jobs data
+        const transformedJobs = jobsList.items.map(job => ({
+          id: job.id,
+          title: job.title,
+          location: job.location || 'Remote',
+          type: job.type,
+          postedDate: job.created,
+          applicationsCount: 0, // Will be updated with actual count
+          status: job.status || 'Draft' // Provide default status with capital D
+        }));
+
+        // Fetch applications for all jobs
+        const applications = await pb.collection('applications').getList<ApplicationRecord>(1, 100, {
+          filter: jobsList.items.map(job => `job = "${job.id}"`).join('||'),
+          expand: 'job'
+        });
+
+        // Update jobs with application counts
+        const jobsWithCounts = transformedJobs.map(job => ({
+          ...job,
+          applicationsCount: applications.items.filter(app => app.job === job.id).length
+        }));
+
+        setJobs(jobsWithCounts);
+
+        // Calculate application statistics
+        const stats = {
+          totalApplications: applications.items.length,
+          newApplications: applications.items.filter(app => app.status === 'PENDING').length,
+          inReview: applications.items.filter(app => app.status === 'REVIEWING').length,
+          accepted: applications.items.filter(app => app.status === 'ACCEPTED').length
+        };
+        setApplicationStats(stats);
+
       } catch (error) {
-        console.error('Error fetching dashboard data:', error)
+        console.error('Error fetching dashboard data:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
     
-    fetchDashboardData()
-  }, [])
+    fetchDashboardData();
+  }, []);
   
   // Function to format date
   const formatDate = (dateString: string) => {
@@ -113,20 +122,20 @@ export default function EmployerDashboard() {
   // Function to get status badge class
   const getStatusClass = (status: Job['status']) => {
     switch (status) {
-      case 'active':
+      case 'Active':
         return 'bg-green-400/10 text-green-400'
-      case 'draft':
+      case 'Draft':
         return 'bg-yellow-400/10 text-yellow-400'
-      case 'closed':
+      case 'Closed':
         return 'bg-red-400/10 text-red-400'
       default:
-        return ''
+        return 'bg-gray-400/10 text-gray-400'
     }
   }
   
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0A0A0A]">
+      <div className="min-h-screen bg-[#0A0A0A]">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
           <div className="animate-pulse">
             <div className="h-8 w-1/3 bg-white/10 rounded mb-4"></div>
@@ -143,12 +152,24 @@ export default function EmployerDashboard() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0A]">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+            <p className="text-red-400">{error}</p>
+          </div>
+        </div>
+      </div>
     )
   }
   
   return (
-    <main className="min-h-screen bg-[#0A0A0A]">
+    <div className="min-h-screen bg-[#0A0A0A]">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pb-12 pt-20">
         <h1 className="text-3xl font-bold text-white mb-8">Employer Dashboard</h1>
         
@@ -229,7 +250,7 @@ export default function EmployerDashboard() {
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <div className="flex justify-center">
                           <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getStatusClass(job.status)}`}>
-                            {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                            {job.status}
                           </span>
                         </div>
                       </td>
@@ -276,12 +297,14 @@ export default function EmployerDashboard() {
               <BuildingOffice2Icon className="h-8 w-8" />
             </div>
             <div>
-              <h3 className="text-white font-medium">Acme Productions</h3>
-              <p className="text-gray-400 text-sm">Los Angeles, CA • Media Production</p>
+              <h3 className="text-white font-medium">{companyProfile?.company_name || 'Your Company'}</h3>
+              <p className="text-gray-400 text-sm">
+                {companyProfile?.location || 'Location'} • {companyProfile?.industry || 'Industry'}
+              </p>
             </div>
           </div>
         </div>
       </div>
-    </main>
+    </div>
   )
 } 

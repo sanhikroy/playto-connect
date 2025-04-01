@@ -60,14 +60,18 @@ export interface JobRecord extends BaseRecord {
     title: string;
     description: string;
     requirements: string;
-    salary?: string;
-    location?: string;
-    is_remote: boolean;
+    location: string;
     type: string;
-    role: string;
+    salary: string;
     employer: string;
+    status: 'Active' | 'Draft' | 'Closed';
+    is_remote: boolean;
+    role: string;
+    videos?: string[];
+    created: string;
+    updated: string;
     expand?: {
-        employer?: UserRecord;
+        employer?: EmployerProfileRecord;
     };
 }
 
