@@ -3,9 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { signIn } from 'next-auth/react'
 import { useAuth } from '@/components/providers/AuthProvider'
-import { pb } from '@/lib/pocketbase'
 
 export default function SignUp() {
   const router = useRouter()
@@ -16,7 +14,7 @@ export default function SignUp() {
   const [role, setRole] = useState<'TALENT' | 'EMPLOYER'>('TALENT')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const { loginWithGoogle } = useAuth()
+  const { signup, loginWithGoogle } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,39 +34,11 @@ export default function SignUp() {
     setLoading(true)
     
     try {
-      // Register the user
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-          role,
-        }),
-      })
-      
-      const data = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Something went wrong')
-      }
-      
-      // Automatically sign in the user after successful registration
-      const signInResult = await signIn('credentials', {
-        redirect: false,
-        email,
-        password,
-      })
-      
-      if (signInResult?.error) {
-        throw new Error('Failed to sign in after registration')
-      }
+      // Use the signup function from AuthProvider
+      const userRole = await signup(name, email, password, role)
       
       // Redirect based on role
-      if (role === 'TALENT') {
+      if (userRole === 'TALENT') {
         router.push('/talent/complete-profile')
       } else {
         router.push('/employer/complete-profile')
@@ -87,22 +57,9 @@ export default function SignUp() {
 
   const handleGoogleSignUp = async () => {
     try {
+      // Redirect to the Google authentication page
       await loginWithGoogle()
-      
-      // After successful authentication, check user role to determine redirect
-      const userData = pb.authStore.model;
-      
-      // Redirect based on role
-      if (userData?.role === 'TALENT') {
-        router.push('/talent/complete-profile')
-      } else if (userData?.role === 'EMPLOYER') {
-        router.push('/employer/complete-profile')
-      } else {
-        // Default to talent profile if role is not yet set
-        router.push('/talent/complete-profile')
-      }
-      
-      router.refresh()
+      // The loginWithGoogle function will handle the redirect
     } catch (error) {
       console.error('Google sign up failed:', error)
       setError('Google sign up failed. Please try again.')

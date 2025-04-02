@@ -76,34 +76,45 @@ export default function EditTalentProfile() {
           throw new Error('Not authenticated');
         }
 
-        const record = await pb.collection('talent_profiles').getFirstListItem<TalentProfileRecord>(
-          `user = "${authData.id}"`,
-          {
-            expand: 'user'
+        try {
+          // Try to get the existing profile
+          const record = await pb.collection('talent_profiles').getFirstListItem<TalentProfileRecord>(
+            `user = "${authData.id}"`,
+            {
+              expand: 'user'
+            }
+          );
+          
+          // Transform the data to match our form structure
+          const profileData = {
+            title: record.title || '',
+            bio: record.bio || '',
+            skills: Array.isArray(record.skills) ? record.skills : [],
+            experience: record.experience || '',
+            portfolioVideos: Array.isArray(record.portfolio_videos) ? record.portfolio_videos : [{
+              id: '',
+              type: 'youtube',
+              url: ''
+            }],
+            socialMediaUrl: record.social_media_url || '',
+            profilePicture: null,
+            profilePictureUrl: record.expand?.user?.avatar || ''
+          };
+          
+          setFormData(profileData);
+          setProfileImagePreview(profileData.profilePictureUrl);
+        } catch (profileError) {
+          // Profile doesn't exist yet, using default form values
+          console.log('Profile not found, using default values. This is normal for new users.', profileError);
+          // User avatar might still exist
+          if (authData.avatar) {
+            setProfileImagePreview(authData.avatar);
+            setFormData(prev => ({ ...prev, profilePictureUrl: authData.avatar }));
           }
-        );
-        
-        // Transform the data to match our form structure
-        const profileData = {
-          title: record.title || '',
-          bio: record.bio || '',
-          skills: Array.isArray(record.skills) ? record.skills : [],
-          experience: record.experience || '',
-          portfolioVideos: Array.isArray(record.portfolio_videos) ? record.portfolio_videos : [{
-            id: '',
-            type: 'youtube',
-            url: ''
-          }],
-          socialMediaUrl: record.social_media_url || '',
-          profilePicture: null,
-          profilePictureUrl: record.expand?.user?.avatar || ''
-        };
-        
-        setFormData(profileData);
-        setProfileImagePreview(profileData.profilePictureUrl);
+        }
       } catch (error) {
-        console.error('Error fetching profile:', error);
-        setError('Failed to load profile. Please try again.');
+        console.error('Error during authentication check:', error);
+        setError('Authentication error. Please sign in again.');
       } finally {
         setLoading(false);
       }
@@ -118,17 +129,23 @@ export default function EditTalentProfile() {
   };
 
   const handleSkillsChange = (
-    newValue: MultiValue<{ value: string; label: string }>
+    newValue: unknown,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _actionMeta: any
   ) => {
-    const skills = newValue.map(item => item.value);
+    const skillsValue = newValue as MultiValue<{ value: string; label: string }>;
+    const skills = skillsValue.map(item => item.value);
     setFormData(prev => ({ ...prev, skills }));
   };
 
   const handleExperienceChange = (
-    newValue: SingleValue<{ value: string; label: string }>
+    newValue: unknown,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _actionMeta: any
   ) => {
-    if (newValue) {
-      setFormData(prev => ({ ...prev, experience: newValue.value }));
+    const experienceValue = newValue as SingleValue<{ value: string; label: string }>;
+    if (experienceValue) {
+      setFormData(prev => ({ ...prev, experience: experienceValue.value }));
     }
   };
 
@@ -281,13 +298,8 @@ export default function EditTalentProfile() {
         }
       }
       
-      // Get the current profile record
-      const record = await pb.collection('talent_profiles').getFirstListItem<TalentProfileRecord>(
-        `user = "${authData.id}"`
-      );
-      
-      // Prepare data for update
-      const updateData = {
+      // Prepare common data for create/update
+      const profileData = {
         title: formData.title,
         bio: formData.bio,
         skills: formData.skills,
@@ -296,9 +308,26 @@ export default function EditTalentProfile() {
         social_media_url: formData.socialMediaUrl,
         is_complete: true // Mark as complete since all required fields are filled
       };
-      
-      // Update profile
-      await pb.collection('talent_profiles').update(record.id, updateData);
+
+      // Check if profile exists by trying to get it
+      try {
+        // Try to get the existing profile
+        const record = await pb.collection('talent_profiles').getFirstListItem<TalentProfileRecord>(
+          `user = "${authData.id}"`
+        );
+        
+        // Update existing profile
+        await pb.collection('talent_profiles').update(record.id, profileData);
+        console.log('Profile updated successfully');
+      } catch (fetchError) {
+        // Profile doesn't exist, create a new one
+        console.log('Creating new profile. Error was:', fetchError);
+        await pb.collection('talent_profiles').create({
+          ...profileData,
+          user: authData.id // Add the user ID for creation
+        });
+        console.log('Profile created successfully');
+      }
       
       setSuccess(true);
       

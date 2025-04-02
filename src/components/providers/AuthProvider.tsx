@@ -17,6 +17,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
   loginWithGoogle: () => Promise<void>
+  signup: (name: string, email: string, password: string, role: 'TALENT' | 'EMPLOYER') => Promise<'TALENT' | 'EMPLOYER'>
   logout: () => void
 }
 
@@ -69,16 +70,58 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const loginWithGoogle = async () => {
     try {
-      const authData = await pb.collection('users').authWithOAuth2({ provider: 'google' })
-      setUser({
-        id: authData.record.id,
-        email: authData.record.email,
-        name: authData.record.name,
-        role: authData.record.role
-      })
+      console.log('Starting Google authentication flow');
+      
+      // Use PocketBase's OAuth2
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      console.log('Using redirect URL:', redirectUrl);
+      
+      const authData = await pb.collection('users').authWithOAuth2({ 
+        provider: 'google',
+        redirectUrl: redirectUrl
+      });
+      
+      // This line should only execute if we're not redirected
+      console.log('Auth data received:', authData);
+      
+      // If we got a URL, redirect
+      if (typeof authData === 'object' && 'authUrl' in authData) {
+        console.log('Redirecting to:', authData.authUrl);
+        if (typeof authData.authUrl === 'string') {
+          window.location.href = authData.authUrl;
+        }
+      } else {
+        // We're already authenticated
+        console.log('Already authenticated with Google');
+        
+        // Set user if we have record data
+        if ('record' in authData) {
+          setUser({
+            id: authData.record.id,
+            email: authData.record.email,
+            name: authData.record.name,
+            role: authData.record.role
+          });
+          
+          // If user already has a role, redirect them to their dashboard
+          if (authData.record.role && authData.record.role !== '') {
+            console.log('User already has role:', authData.record.role);
+            // Redirect to the appropriate dashboard based on role
+            if (authData.record.role === 'EMPLOYER') {
+              router.push('/employer/dashboard');
+            } else {
+              router.push('/talent/dashboard');
+            }
+          } else {
+            // If user does not have a role, send to role selection
+            console.log('User needs to select a role');
+            router.push('/auth/callback');
+          }
+        }
+      }
     } catch (error) {
-      console.error('Google login failed:', error)
-      throw error
+      console.error('Google login failed - detailed error:', error);
+      throw error;
     }
   }
 
@@ -88,12 +131,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
     router.push('/auth/signin')
   }
 
+  const signup = async (name: string, email: string, password: string, role: 'TALENT' | 'EMPLOYER') => {
+    try {
+      // Create the user with PocketBase
+      await pb.collection('users').create({
+        name,
+        email,
+        password,
+        passwordConfirm: password,
+        role
+      })
+
+      // Automatically sign in after registration
+      await login(email, password)
+      
+      // Return the role for redirect handling in the component
+      return role
+    } catch (error) {
+      console.error('Signup failed:', error)
+      throw error
+    }
+  }
+
   const value = {
     user,
     isLoading,
     isAuthenticated: !!user,
     login,
     loginWithGoogle,
+    signup,
     logout
   }
 

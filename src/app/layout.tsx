@@ -19,7 +19,13 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <body suppressHydrationWarning>
         <AuthProvider>
           <ErrorBoundary>
-            <div className="min-h-screen bg-[#0A0A0A]">
+            <div className="min-h-screen bg-[#0A0A0A] relative">
+              <div 
+                className="absolute inset-0 -z-10 pointer-events-none"
+                style={{
+                  background: 'radial-gradient(circle at 50% 0%, rgba(0, 0, 255, 0.3), transparent 70%)',
+                }}
+              />
               <Navigation />
               {children}
             </div>

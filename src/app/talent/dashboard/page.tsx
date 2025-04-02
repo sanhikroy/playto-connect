@@ -45,42 +45,64 @@ export default function TalentDashboard() {
           throw new Error('Not authenticated');
         }
 
-        // Fetch profile data
-        const profileRecord = await pb.collection('talent_profiles').getFirstListItem<TalentProfileRecord>(
-          `user = "${authData.id}"`,
-          {
-            expand: 'user'
-          }
-        );
+        // Initialize profile with default values
+        let profileData = {
+          name: authData.name || 'New Talent',
+          title: 'Add your professional title',
+          completionPercentage: 0,
+          profilePicture: undefined as string | undefined
+        };
+
+        try {
+          // Fetch profile data - wrapped in a separate try/catch
+          const profileRecord = await pb.collection('talent_profiles').getFirstListItem<TalentProfileRecord>(
+            `user = "${authData.id}"`,
+            {
+              expand: 'user'
+            }
+          );
+          
+          // Calculate profile completion percentage
+          const requiredFields = ['title', 'bio', 'skills', 'experience'];
+          const completedFields = requiredFields.filter(field => 
+            profileRecord[field as keyof TalentProfileRecord] && 
+            (typeof profileRecord[field as keyof TalentProfileRecord] === 'string' ? 
+              (profileRecord[field as keyof TalentProfileRecord] as string).trim() !== '' : 
+              Array.isArray(profileRecord[field as keyof TalentProfileRecord]) ? 
+                (profileRecord[field as keyof TalentProfileRecord] as string[]).length > 0 : 
+                true
+            )
+          );
+          
+          const completionPercentage = Math.round((completedFields.length / requiredFields.length) * 100);
+          
+          // Update profileData with actual values
+          profileData = {
+            name: profileRecord.expand?.user?.name || authData.name || 'Talent',
+            title: profileRecord.title || 'Add your professional title',
+            completionPercentage,
+            profilePicture: profileRecord.expand?.user?.avatar
+          };
+        } catch (error) {
+          console.log('Profile not found, using default values', error);
+          // If profile fetch fails, we'll use the default values set above
+        }
         
-        // Calculate profile completion percentage
-        const requiredFields = ['title', 'bio', 'skills', 'experience'];
-        const completedFields = requiredFields.filter(field => 
-          profileRecord[field as keyof TalentProfileRecord] && 
-          (typeof profileRecord[field as keyof TalentProfileRecord] === 'string' ? 
-            (profileRecord[field as keyof TalentProfileRecord] as string).trim() !== '' : 
-            Array.isArray(profileRecord[field as keyof TalentProfileRecord]) ? 
-              (profileRecord[field as keyof TalentProfileRecord] as string[]).length > 0 : 
-              true
-          )
-        );
-        
-        const completionPercentage = Math.round((completedFields.length / requiredFields.length) * 100);
-        
-        setProfile({
-          name: profileRecord.expand?.user?.name || 'Talent',
-          title: profileRecord.title || 'Add your professional title',
-          completionPercentage,
-          profilePicture: profileRecord.expand?.user?.avatar
-        });
+        // Set the profile with either real data or defaults
+        setProfile(profileData);
         
         // Fetch applications using the custom API
-        const response = await fetch(`${pb.baseUrl}/api/custom/applications-with-details?user_id=${authData.id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch applications');
+        try {
+          const response = await fetch(`${pb.baseUrl}/api/custom/applications-with-details?user_id=${authData.id}`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch applications');
+          }
+          const data = await response.json();
+          setApplications(data.items);
+        } catch (appError) {
+          console.error('Error fetching applications:', appError);
+          setApplications([]);
         }
-        const data = await response.json();
-        setApplications(data.items);
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -198,6 +220,20 @@ export default function TalentDashboard() {
               </div>
               <p className="text-xs text-gray-500 mt-1">{profile?.completionPercentage}% Complete</p>
             </div>
+            
+            {profile?.completionPercentage === 0 && (
+              <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <p className="text-blue-400 text-sm">
+                  <span className="font-medium">Complete your profile</span> to improve your chances of getting hired and to start applying for jobs.
+                </p>
+                <Link 
+                  href="/talent/profile/edit"
+                  className="mt-2 inline-flex items-center text-xs font-medium text-blue-400 hover:text-blue-300"
+                >
+                  Complete Profile <ArrowRightIcon className="h-3 w-3 ml-1" />
+                </Link>
+              </div>
+            )}
             
             <div className="flex flex-wrap gap-2">
               <Link
