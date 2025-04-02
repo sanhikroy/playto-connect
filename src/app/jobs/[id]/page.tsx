@@ -80,6 +80,15 @@ const roleIcons = {
   'web-developer': ComputerDesktopIcon,
 }
 
+// Utility function to format salary with commas
+const formatSalary = (salaryStr: string | undefined | null) => {
+  if (!salaryStr) return 'Salary not specified'
+  
+  // Add commas to numbers over 1000 for better readability
+  // e.g., "$50,000-$75,000/year" or "$25/hour"
+  return salaryStr.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+}
+
 export default function JobDetail() {
   const { id } = useParams()
   const router = useRouter()
@@ -372,7 +381,7 @@ export default function JobDetail() {
                 </div>
                 <div className="flex items-center text-gray-400">
                   <CurrencyDollarIcon className="h-5 w-5 mr-2 text-gray-400" />
-                  <span>{job.salary}</span>
+                  <span>{formatSalary(job.salary)}</span>
                 </div>
                 {job.website && (
                   <div className="flex items-center text-gray-400">

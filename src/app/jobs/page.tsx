@@ -88,7 +88,12 @@ const roleIcons = {
 // Helper function to format salary
 const formatSalary = (salaryStr: string | undefined | null) => {
   if (!salaryStr) return 'Salary not specified'
-  return salaryStr
+  
+  // Our new salary format will be like "$50000-$75000/year" or "$25/hour"
+  // Make it more readable by adding commas to numbers over 1000
+  // e.g., "$50,000-$75,000/year" or "$25/hour"
+  
+  return salaryStr.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
 }
 
 // Helper function to format job type display name

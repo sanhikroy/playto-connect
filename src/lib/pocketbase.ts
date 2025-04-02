@@ -68,6 +68,7 @@ export interface JobRecord extends BaseRecord {
     is_remote: boolean;
     role: string;
     videos?: string[];
+    assignment?: string;
     created: string;
     updated: string;
     expand?: {
