@@ -42,29 +42,34 @@ export default function EmployerProfileEdit() {
           throw new Error('Not authenticated');
         }
 
-        const profile = await pb.collection('employer_profiles').getFirstListItem<EmployerProfileRecord>(
-          `user = "${authData.id}"`,
-          {
-            expand: 'user'
-          }
-        );
+        try {
+          const profile = await pb.collection('employer_profiles').getFirstListItem<EmployerProfileRecord>(
+            `user = "${authData.id}"`,
+            {
+              expand: 'user'
+            }
+          );
 
-        // Parse location string
-        const [city, state, country] = profile.location?.split(', ').map(part => part.trim()) || ['', '', ''];
+          // Parse location string
+          const [city, state, country] = profile.location?.split(', ').map(part => part.trim()) || ['', '', ''];
 
-        // Update form data with existing profile
-        setFormData(prev => ({
-          ...prev,
-          companyName: profile.company_name || '',
-          industry: profile.industry || '',
-          country: country || '',
-          state: state || '',
-          city: city || '',
-          website: profile.website || '',
-          description: profile.company_description || '',
-          employeeCount: profile.size || ''
-        }));
-
+          // Update form data with existing profile
+          setFormData(prev => ({
+            ...prev,
+            companyName: profile.company_name || '',
+            industry: profile.industry || '',
+            country: country || '',
+            state: state || '',
+            city: city || '',
+            website: profile.website || '',
+            description: profile.company_description || '',
+            employeeCount: profile.size || ''
+          }));
+        } catch {
+          // Profile doesn't exist yet - that's okay for a new user
+          console.log('No profile found, using default values');
+          // Continue with default values already in state
+        }
       } catch (error) {
         console.error('Error fetching profile:', error);
         setError(error instanceof Error ? error.message : 'Failed to load profile');
@@ -95,15 +100,7 @@ export default function EmployerProfileEdit() {
         throw new Error('Not authenticated');
       }
 
-      // Get existing profile
-      const existingProfile = await pb.collection('employer_profiles').getFirstListItem<EmployerProfileRecord>(
-        `user = "${authData.id}"`,
-        {
-          expand: 'user'
-        }
-      );
-
-      // Prepare data for update
+      // Prepare data for create/update
       const data: ProfileData = {
         company_name: formData.companyName,
         industry: formData.industry,
@@ -114,7 +111,7 @@ export default function EmployerProfileEdit() {
         is_complete: true
       };
 
-      // Handle logo upload if a new file is selected
+      // Handle logo upload if a file is selected
       if (formData.logoFile) {
         const formDataWithFile = new FormData();
         formDataWithFile.append('logo', formData.logoFile);
@@ -122,8 +119,25 @@ export default function EmployerProfileEdit() {
         data.logo = fileRecord.id;
       }
 
-      // Update profile
-      await pb.collection('employer_profiles').update(existingProfile.id, data);
+      try {
+        // Try to get existing profile
+        const existingProfile = await pb.collection('employer_profiles').getFirstListItem<EmployerProfileRecord>(
+          `user = "${authData.id}"`,
+          {
+            expand: 'user'
+          }
+        );
+
+        // Update existing profile
+        await pb.collection('employer_profiles').update(existingProfile.id, data);
+      } catch {
+        // Profile doesn't exist, create a new one
+        console.log('Creating new employer profile');
+        await pb.collection('employer_profiles').create({
+          ...data,
+          user: authData.id
+        });
+      }
       
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)

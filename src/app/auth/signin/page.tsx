@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/components/providers/AuthProvider'
-import { pb } from '@/lib/pocketbase'
 
 export default function SignIn() {
   const router = useRouter()
@@ -50,15 +49,8 @@ export default function SignIn() {
       // Successful login
       if (callbackUrl) {
         router.push(callbackUrl) // Redirect to the callback URL if provided
-      } else {
-        // Check user role and redirect accordingly
-        const userData = await pb.authStore.model;
-        if (userData?.role === 'EMPLOYER') {
-          router.push('/employer/dashboard')
-        } else {
-          router.push('/talent/dashboard')
-        }
       }
+      // AuthProvider will handle the default routing based on role
       router.refresh()
     } catch (error) {
       console.error('Login failed:', error)
@@ -69,24 +61,15 @@ export default function SignIn() {
 
   const handleGoogleSignIn = async () => {
     try {
+      setLoading(true)
+      setError('')
       await loginWithGoogle()
-      
-      // After successful authentication
-      if (callbackUrl) {
-        router.push(callbackUrl)
-      } else {
-        // Check user role and redirect accordingly
-        const userData = await pb.authStore.model;
-        if (userData?.role === 'EMPLOYER') {
-          router.push('/employer/dashboard')
-        } else {
-          router.push('/talent/dashboard')
-        }
-      }
-      router.refresh()
+      // No need for routing logic here as Google auth will redirect to the callback URL
+      // which will then handle routing based on the user's role
     } catch (error) {
       console.error('Google sign in failed:', error)
       setError('Google sign in failed. Please try again.')
+      setLoading(false)
     }
   }
 

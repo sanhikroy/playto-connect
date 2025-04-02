@@ -62,6 +62,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         name: authData.record.name,
         role: authData.record.role
       })
+      
+      // Handle routing based on user role
+      console.log('User authenticated with role:', authData.record.role);
+      if (authData.record.role && authData.record.role !== '') {
+        if (authData.record.role === 'EMPLOYER') {
+          router.push('/employer/dashboard');
+        } else {
+          router.push('/talent/dashboard');
+        }
+      }
     } catch (error) {
       console.error('Login failed:', error)
       throw error

@@ -79,9 +79,9 @@ export default function AuthCallback() {
       
       // Redirect based on role
       if (role === 'EMPLOYER') {
-        router.push('/employer/complete-profile');
+        router.push('/employer/company/edit');
       } else {
-        router.push('/talent/complete-profile');
+        router.push('/talent/profile/edit');
       }
     } catch (error) {
       console.error('Failed to update role:', error);
